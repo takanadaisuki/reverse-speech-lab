@@ -13,7 +13,7 @@ main{max-width:560px;margin:auto;padding:26px 18px 60px}.page-header{display:fle
 </style>
 </head>
 <body><main>
-<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.1.6</span></div>
+<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.1.7</span></div>
 <div class="group"><label for="word">読み上げる言葉</label><input id="word" type="text" value="アイス" maxlength="80" autocomplete="off" spellcheck="false"><button id="start" class="primary">実験を開始する</button><div id="status" class="status" role="status" aria-live="polite"></div></div>
 <div id="media" class="section hide">
 <div class="audio-title">元の音声</div><audio id="originalAudio" controls playsinline preload="metadata"></audio>
@@ -21,8 +21,8 @@ main{max-width:560px;margin:auto;padding:26px 18px 60px}.page-header{display:fle
 <div class="actions"><a id="originalDownload" class="btn" download="original.wav">元音声を保存</a><a id="reverseDownload" class="btn" download="reversed.wav">逆再生を保存</a></div>
 </div>
 <div id="report" class="section hide">
-<label>音素AIの聞き取り</label><div id="asrText" class="result">解析中…</div><div id="phonemes" class="candidate hide"></div><div id="phonemeCandidates" class="candidate hide"></div><div id="speedCandidates" class="candidate hide"></div>
-<div class="actions"><button id="copyAi" class="outline" type="button" disabled>聞き取りをコピー</button><button id="runAsr" class="quiet" type="button">音素AIで再認識</button><button id="trySpeeds" class="quiet" type="button">速度を変えて解析</button></div>
+<label>音素AIの聞き取り</label><div id="asrText" class="result">解析中…</div><div id="phonemes" class="candidate hide"></div><div id="phonemeCandidates" class="candidate hide"></div><div id="onsetCandidates" class="candidate hide"></div>
+<div class="actions"><button id="copyAi" class="outline" type="button" disabled>聞き取りをコピー</button><button id="runAsr" class="quiet" type="button">音素AIで再認識</button><button id="tryOnset" class="quiet" type="button">先頭音を強調して解析</button></div>
 <div class="actions"><button id="variants" class="quiet" type="button">Whisperでも聞き取る</button></div><div id="alternatives" class="candidate hide"></div>
 <div class="space"><label for="human">実際に聞こえた言葉</label><input id="human" type="text" placeholder="例：うしあ" spellcheck="false" autocomplete="off"></div>
 <div class="actions"><button id="copy" class="quiet" type="button">結果をコピー</button></div>
@@ -39,12 +39,12 @@ const $=id=>document.getElementById(id);
 let ctx,sourceBuffer,reverseBuffer,sourceUrl,reverseUrl,wordAtRun='',aiResult='',busy=false,transcriberCache=null,transcriberModel='',phonemeRecognizer=null;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function status(msg,kind=''){$('status').textContent=msg;$('status').className='status '+kind}
-function setBusy(v){busy=v;for(const id of ['start','runAsr','variants','trySpeeds'])$(id).disabled=v}
+function setBusy(v){busy=v;for(const id of ['start','runAsr','variants','tryOnset'])$(id).disabled=v}
 function context(){return ctx??(ctx=new (window.AudioContext||window.webkitAudioContext)())}
 function audioUrl(id,download,blob,old,name){if(old)URL.revokeObjectURL(old);const url=URL.createObjectURL(blob);$(id).src=url;$(download).href=url;$(download).download=name;return url}
 function reverseAudio(buffer){const b=context().createBuffer(buffer.numberOfChannels,buffer.length,buffer.sampleRate);for(let c=0;c<buffer.numberOfChannels;c++){const a=buffer.getChannelData(c),o=b.getChannelData(c);for(let i=0;i<a.length;i++)o[i]=a[a.length-1-i]}return b}
 function wav(buffer){const n=buffer.length,c=buffer.numberOfChannels,r=buffer.sampleRate,ab=new ArrayBuffer(44+n*c*2),v=new DataView(ab);const txt=(p,s)=>{for(let i=0;i<s.length;i++)v.setUint8(p+i,s.charCodeAt(i))};txt(0,'RIFF');v.setUint32(4,36+n*c*2,true);txt(8,'WAVE');txt(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,c,true);v.setUint32(24,r,true);v.setUint32(28,r*c*2,true);v.setUint16(32,c*2,true);v.setUint16(34,16,true);txt(36,'data');v.setUint32(40,n*c*2,true);let p=44;const channels=Array.from({length:c},(_,i)=>buffer.getChannelData(i));for(let i=0;i<n;i++)for(let j=0;j<c;j++){const s=Math.max(-1,Math.min(1,channels[j][i]));v.setInt16(p,s<0?s*32768:s*32767,true);p+=2}return new Blob([ab],{type:'audio/wav'})}
-async function acceptAudio(data,uploaded=false){const b=await context().decodeAudioData(data.slice(0));if(!b.length)throw Error('音声データが空です');sourceBuffer=b;reverseBuffer=(uploaded&&$('alreadyReversed').checked)?b:reverseAudio(b);const name=($('word').value.trim()||'audio').replace(/[\\/:*?"<>|\s]/g,'_').slice(0,25);sourceUrl=audioUrl('originalAudio','originalDownload',wav(b),sourceUrl,name+'_original.wav');reverseUrl=audioUrl('reverseAudio','reverseDownload',wav(reverseBuffer),reverseUrl,name+'_reversed.wav');$('media').classList.remove('hide');$('report').classList.remove('hide');$('asrText').textContent='解析中…';$('human').value='';aiResult='';$('copyAi').disabled=true;$('alternatives').classList.add('hide');$('alternatives').textContent='';$('phonemes').classList.add('hide');$('phonemes').textContent='';$('phonemeCandidates').classList.add('hide');$('phonemeCandidates').textContent='';$('speedCandidates').classList.add('hide');$('speedCandidates').textContent=''}
+async function acceptAudio(data,uploaded=false){const b=await context().decodeAudioData(data.slice(0));if(!b.length)throw Error('音声データが空です');sourceBuffer=b;reverseBuffer=(uploaded&&$('alreadyReversed').checked)?b:reverseAudio(b);const name=($('word').value.trim()||'audio').replace(/[\\/:*?"<>|\s]/g,'_').slice(0,25);sourceUrl=audioUrl('originalAudio','originalDownload',wav(b),sourceUrl,name+'_original.wav');reverseUrl=audioUrl('reverseAudio','reverseDownload',wav(reverseBuffer),reverseUrl,name+'_reversed.wav');$('media').classList.remove('hide');$('report').classList.remove('hide');$('asrText').textContent='解析中…';$('human').value='';aiResult='';$('copyAi').disabled=true;$('alternatives').classList.add('hide');$('alternatives').textContent='';$('phonemes').classList.add('hide');$('phonemes').textContent='';$('phonemeCandidates').classList.add('hide');$('phonemeCandidates').textContent='';$('onsetCandidates').classList.add('hide');$('onsetCandidates').textContent=''}
 function trusted(url){try{const u=new URL(url);return u.protocol==='https:'&&/^audio[0-9]+\.tts\.quest$/.test(u.hostname)}catch{return false}}
 async function synthesize(text,speaker){const u=new URL('https://api.tts.quest/v3/voicevox/synthesis');u.searchParams.set('text',text);u.searchParams.set('speaker',speaker);status('音声を生成中…');const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('音声生成に失敗しました（'+r.status+'）');const info=await r.json();if(!info.success)throw Error('音声生成が制限されています。時間をおいて再試行してください');if(!trusted(info.wavDownloadUrl)||!trusted(info.audioStatusUrl))throw Error('音声のURLを確認できませんでした');for(let i=0;i<65;i++){const s=await fetch(info.audioStatusUrl,{cache:'no-store'});if(s.ok){const j=await s.json();if(j.isAudioError)throw Error('音声生成に失敗しました');if(j.isAudioReady){const w=await fetch(info.wavDownloadUrl,{cache:'no-store'});if(!w.ok)throw Error('音声を取得できませんでした');return w.arrayBuffer()}}await sleep(2000)}throw Error('音声生成がタイムアウトしました')}
 function mono16(buffer){const rate=16000,n=Math.max(1,Math.round(buffer.duration*rate)),out=new Float32Array(n),src=Array.from({length:buffer.numberOfChannels},(_,i)=>buffer.getChannelData(i));for(let i=0;i<n;i++){const pos=i*buffer.sampleRate/rate,j=Math.min(buffer.length-1,Math.floor(pos)),k=Math.min(buffer.length-1,j+1),f=pos-j;let sum=0;for(const ch of src)sum+=ch[j]*(1-f)+ch[k]*f;out[i]=sum/src.length}return out}
@@ -229,26 +229,30 @@ async function recognize(){
   status('完了','success');
  }catch(e){$('asrText').textContent='音素認識に失敗しました';throw Error('音素AIの実行に失敗しました。'+(e?.message||String(e)))}
 }
-// 速度を変えた音声を独立に認識する。元の認識を勝手に置換しない。
-// 波形の時間軸を変えてから音素AIに入力し、実際の認識結果だけを表示する。
-function changeSpeed(signal,speed){
- const n=Math.max(1,Math.round(signal.length/speed));
- const out=new Float32Array(n);
- for(let i=0;i<n;i++){
-  const pos=i*speed,j=Math.min(signal.length-1,Math.floor(pos));
-  const k=Math.min(signal.length-1,j+1),f=pos-j;
-  out[i]=signal[j]*(1-f)+signal[k]*f;
+// 逆再生の先頭にある弱い母音を強調する実験。
+// 特定の単語や期待する読みを参照せず、実際の音響データを加工して同じモデルに再入力する。
+function enhanceOnset(signal){
+ const out=new Float32Array(signal.length);let peak=0;
+ for(let i=0;i<signal.length;i++){
+  const t=i/16000;
+  // 0.10〜0.34秒付近の弱い音を強調し、0.46秒までに元の音量に戻す。
+  const gain=t<.10?1.0:t<.16?1+1.7*(t-.10)/.06:t<.34?2.7:t<.46?1+1.7*(.46-t)/.12:1;
+  out[i]=signal[i]*gain;peak=Math.max(peak,Math.abs(out[i]));
  }
+ const scale=peak>.95?.95/peak:1;
+ if(scale!==1)for(let i=0;i<out.length;i++)out[i]*=scale;
  return out;
 }
-async function trySpeedVariants(){
+async function tryOnset(){
  if(!reverseBuffer)throw Error('先に音声を作成してください');
- const box=$('speedCandidates');box.classList.remove('hide');box.textContent='速度別の音素認識を準備中…';
+ const box=$('onsetCandidates');box.classList.remove('hide');box.textContent='先頭音を解析中…';
  const recognizer=await getPhonemeRecognizer();
- const base=mono16(reverseBuffer),lines=[];
- for(const [speed,label] of [[0.88,'遅め（0.88倍）'],[1.12,'速め（1.12倍）']]){
-  status(label+'を解析中…');
-  const input=await recognizer.extractor(withSilence(changeSpeed(base,speed)));
+ const base=mono16(reverseBuffer),enhanced=enhanceOnset(base);
+ const versions=[['先頭音を強調',enhanced],['先頭の無音を短縮',enhanced.subarray(Math.min(Math.floor(.075*16000),Math.floor(enhanced.length*.12)))]];
+ const lines=[];
+ for(const [label,signal] of versions){
+  status(label+'して認識中…');
+  const input=await recognizer.extractor(withSilence(signal));
   const output=await recognizer.model(input);
   try{
    const candidates=decodeCtcCandidates(output.logits,recognizer.idToPhone,24,3);
@@ -256,10 +260,10 @@ async function trySpeedVariants(){
    const kana=candidates[0]?.kana||phonesToKana(raw).kana||'認識できませんでした';
    const others=candidates.slice(1).map(c=>c.kana);
    lines.push(label+'：'+kana+(others.length?'（別候補：'+others.join(' ／ ')+'）':''));
-   box.textContent='速度別の聞き取り：\n'+lines.join('\n');
+   box.textContent=lines.join('\n');
   }finally{output.logits.dispose?.()}
  }
- status('速度別の解析が完了しました','success');
+ status('先頭音の再解析が完了しました','success');
 }
 async function tryVariants(){
  if(!reverseBuffer)throw Error('先に音声を作成してください');
@@ -273,7 +277,7 @@ async function copyText(text){if(!text)return false;try{if(navigator.clipboard?.
 $('start').addEventListener('click',async()=>{if(busy)return;const text=$('word').value.trim();if(!text){status('言葉を入力してください','error');return}setBusy(true);wordAtRun=text;try{const a=await synthesize(text,$('speaker').value);await acceptAudio(a);$('credit').textContent='VOICEVOX：'+$('speaker').selectedOptions[0].textContent;await recognize()}catch(e){status(e?.message||String(e),'error')}finally{setBusy(false)}});
 $('upload').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f||busy)return;setBusy(true);wordAtRun=$('word').value.trim();try{await acceptAudio(await f.arrayBuffer(),true);await recognize()}catch(err){status(err?.message||String(err),'error')}finally{setBusy(false)}});
 $('runAsr').addEventListener('click',async()=>{if(busy)return;setBusy(true);try{await recognize()}catch(e){status(e?.message||String(e),'error')}finally{setBusy(false)}});
-$('trySpeeds').addEventListener('click',async()=>{if(busy)return;setBusy(true);try{await trySpeedVariants()}catch(e){status(e?.message||String(e),'error')}finally{setBusy(false)}});
+$('tryOnset').addEventListener('click',async()=>{if(busy)return;setBusy(true);try{await tryOnset()}catch(e){status(e?.message||String(e),'error')}finally{setBusy(false)}});
 $('variants').addEventListener('click',async()=>{if(busy)return;setBusy(true);try{await tryVariants()}catch(e){status(e?.message||String(e),'error')}finally{setBusy(false)}});
 $('copyAi').addEventListener('click',async()=>{status(await copyText(aiResult)?'聞き取りをコピーしました':'コピーできませんでした',aiResult?'success':'error')});
 $('copy').addEventListener('click',async()=>{const s='元の言葉：'+(wordAtRun||$('word').value.trim())+'\nAI：'+(aiResult||'未認識')+'\n実際の聞き取り：'+$('human').value.trim();const ok=await copyText(s);status(ok?'コピーしました':'コピーできませんでした',ok?'success':'error')});
