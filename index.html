@@ -59,7 +59,7 @@ details .field{margin-top:9px}
 </style>
 </head>
 <body><main>
-<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.2.2</span></div>
+<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.2.3</span></div>
 <div class="group"><label for="word">読み上げる言葉</label><input id="word" type="text" value="アイス" maxlength="80" autocomplete="off" spellcheck="false"><div id="textReverse" class="transform" aria-live="polite"></div><button id="start" class="primary">実験を開始する</button><div id="status" class="status" role="status" aria-live="polite"></div></div>
 <section id="report" class="section hide">
 <div class="compact-label"><label>音声＋入力語の照合推定</label><span class="small">7パターン比較</span></div>
@@ -146,7 +146,7 @@ function reverseTextReference(text){
 }
 function showTextReference(){
  const word=$('word').value.trim(),ref=reverseTextReference(word);
- $('textReverse').textContent=ref?(word+' → '+ref.roman+' → '+ref.reversed+' → '+(ref.kana||'変換不可')):'文字の逆読み：かなを入力';
+ $('textReverse').textContent=ref?(word+' → '+ref.roman+' → '+ref.reversed+' → '+(ref.kana||'変換不可')):'文字の逆読み：かなを入力';$('textReverse').title='VOICEVOX読み上げ表記：'+normalizeSpeechText(word);
 }
 $('word').addEventListener('input',showTextReference);
 showTextReference();
@@ -159,7 +159,15 @@ function reverseAudio(buffer){const b=context().createBuffer(buffer.numberOfChan
 function wav(buffer){const n=buffer.length,c=buffer.numberOfChannels,r=buffer.sampleRate,ab=new ArrayBuffer(44+n*c*2),v=new DataView(ab);const txt=(p,s)=>{for(let i=0;i<s.length;i++)v.setUint8(p+i,s.charCodeAt(i))};txt(0,'RIFF');v.setUint32(4,36+n*c*2,true);txt(8,'WAVE');txt(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,c,true);v.setUint32(24,r,true);v.setUint32(28,r*c*2,true);v.setUint16(32,c*2,true);v.setUint16(34,16,true);txt(36,'data');v.setUint32(40,n*c*2,true);let p=44;const channels=Array.from({length:c},(_,i)=>buffer.getChannelData(i));for(let i=0;i<n;i++)for(let j=0;j<c;j++){const s=Math.max(-1,Math.min(1,channels[j][i]));v.setInt16(p,s<0?s*32768:s*32767,true);p+=2}return new Blob([ab],{type:'audio/wav'})}
 async function acceptAudio(data,uploaded=false){const b=await context().decodeAudioData(data.slice(0));if(!b.length)throw Error('音声データが空です');sourceBuffer=b;sourceMatchesWord=!uploaded;reverseBuffer=(uploaded&&$('alreadyReversed').checked)?b:reverseAudio(b);const name=($('word').value.trim()||'audio').replace(/[\\/:*?"<>|\s]/g,'_').slice(0,25);sourceUrl=audioUrl('originalAudio','originalDownload',wav(b),sourceUrl,name+'_original.wav');reverseUrl=audioUrl('reverseAudio','reverseDownload',wav(reverseBuffer),reverseUrl,name+'_reversed.wav');$('media').classList.remove('hide');$('report').classList.remove('hide');$('asrText').textContent='解析中…';$('human').value='';aiResult='';rawAiResult='';$('basis').textContent='';$('copyAi').disabled=true;$('alternatives').classList.add('hide');$('alternatives').textContent='';$('phonemes').classList.add('hide');$('phonemes').textContent='';$('phonemeCandidates').classList.add('hide');$('phonemeCandidates').textContent='';$('onsetCandidates').classList.add('hide');$('onsetCandidates').textContent='';$('batchResults').replaceChildren();batchData=[];$('copyBatch').disabled=true}
 function trusted(url){try{const u=new URL(url);return u.protocol==='https:'&&/^audio[0-9]+\.tts\.quest$/.test(u.hostname)}catch{return false}}
-async function synthesize(text,speaker){const u=new URL('https://api.tts.quest/v3/voicevox/synthesis');u.searchParams.set('text',text);u.searchParams.set('speaker',speaker);status('音声を生成中…');const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('音声生成に失敗しました（'+r.status+'）');const info=await r.json();if(!info.success)throw Error('音声生成が制限されています。時間をおいて再試行してください');if(!trusted(info.wavDownloadUrl)||!trusted(info.audioStatusUrl))throw Error('音声のURLを確認できませんでした');for(let i=0;i<65;i++){const s=await fetch(info.audioStatusUrl,{cache:'no-store'});if(s.ok){const j=await s.json();if(j.isAudioError)throw Error('音声生成に失敗しました');if(j.isAudioReady){const w=await fetch(info.wavDownloadUrl,{cache:'no-store'});if(!w.ok)throw Error('音声を取得できませんでした');return w.arrayBuffer()}}await sleep(2000)}throw Error('音声生成がタイムアウトしました')}
+// ひらがな・カタカナだけの単語は、表記差でTTSの読みや抑揚が変わらないよう統一する。
+// 「あいす」と「アイス」は同じ合成リクエストになる。漢字や文章は変更しない。
+function normalizeSpeechText(text){
+ const value=String(text).trim().normalize('NFKC');
+ return /^[ぁ-ゖァ-ヶー]+$/.test(value)
+  ? value.replace(/[ぁ-ゖ]/g,c=>String.fromCharCode(c.charCodeAt(0)+96))
+  : value;
+}
+async function synthesize(text,speaker){const speechText=normalizeSpeechText(text);const u=new URL('https://api.tts.quest/v3/voicevox/synthesis');u.searchParams.set('text',speechText);u.searchParams.set('speaker',speaker);status('音声を生成中…');const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('音声生成に失敗しました（'+r.status+'）');const info=await r.json();if(!info.success)throw Error('音声生成が制限されています。時間をおいて再試行してください');if(!trusted(info.wavDownloadUrl)||!trusted(info.audioStatusUrl))throw Error('音声のURLを確認できませんでした');for(let i=0;i<65;i++){const s=await fetch(info.audioStatusUrl,{cache:'no-store'});if(s.ok){const j=await s.json();if(j.isAudioError)throw Error('音声生成に失敗しました');if(j.isAudioReady){const w=await fetch(info.wavDownloadUrl,{cache:'no-store'});if(!w.ok)throw Error('音声を取得できませんでした');return w.arrayBuffer()}}await sleep(2000)}throw Error('音声生成がタイムアウトしました')}
 function mono16(buffer){const rate=16000,n=Math.max(1,Math.round(buffer.duration*rate)),out=new Float32Array(n),src=Array.from({length:buffer.numberOfChannels},(_,i)=>buffer.getChannelData(i));for(let i=0;i<n;i++){const pos=i*buffer.sampleRate/rate,j=Math.min(buffer.length-1,Math.floor(pos)),k=Math.min(buffer.length-1,j+1),f=pos-j;let sum=0;for(const ch of src)sum+=ch[j]*(1-f)+ch[k]*f;out[i]=sum/src.length}return out}
 function normalize(x){let max=0;for(const v of x)max=Math.max(max,Math.abs(v));const gain=max>0?Math.min(2.8,.88/max):1;const out=new Float32Array(x.length);for(let i=0;i<x.length;i++)out[i]=x[i]*gain;return out}
 function tidy(text){return (text||'').trim().replace(/^[\s、。，．!！?？「」『』]+|[\s、。，．!！?？「」『』]+$/g,'')}
