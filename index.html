@@ -2,119 +2,71 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<meta name="theme-color" content="#f6f8fb">
-<title>逆再生音声 実験室 | VOICEVOX × Whisper</title>
+<meta name="theme-color" content="#ffffff">
+<title>逆再生音声 実験室</title>
 <style>
-:root{color-scheme:light;--bg:#f6f8fb;--paper:#fff;--ink:#172235;--muted:#66758b;--line:#dfe5ee;--blue:#2865d8;--soft:#eaf1ff;--green:#087a54;--red:#b93636}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;line-height:1.65}main{max-width:760px;margin:auto;padding:22px 15px 48px}.eyebrow{font-size:12px;letter-spacing:.12em;color:var(--blue);font-weight:800}h1{font-size:clamp(23px,5.5vw,32px);letter-spacing:-.04em;line-height:1.25;margin:5px 0 10px}.sub{font-size:14px;color:var(--muted);margin:0 0 22px}.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:19px;margin-bottom:15px;box-shadow:0 2px 8px #21314a08}h2{font-size:17px;margin:0 0 13px}label{display:block;font-size:13px;font-weight:750;margin-bottom:6px}input[type=text],select{width:100%;min-height:48px;padding:11px 13px;border:1px solid #bdc8d8;border-radius:10px;background:#fff;color:var(--ink);font-size:17px}input[type=file]{width:100%;font-size:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.hint{font-size:12px;color:var(--muted);margin:7px 0 0}.check{display:flex;align-items:flex-start;gap:9px;font-size:14px;font-weight:500;margin:14px 0}.check input{margin-top:5px;accent-color:var(--blue)}button,.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:11px;padding:12px 16px;background:var(--blue);color:#fff;font-size:15px;font-weight:750;cursor:pointer;text-decoration:none}button:disabled{opacity:.45;cursor:not-allowed}.primary{width:100%;min-height:54px;font-size:17px}.secondary{background:var(--soft);color:#1c52a9}.quiet{background:#f1f3f7;color:#3c4b61}.actions{display:flex;flex-wrap:wrap;gap:8px}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:17px 0}.step{border-radius:9px;padding:8px 4px;text-align:center;background:#eef1f6;color:#647286;font-size:12px;font-weight:700}.step.active{background:var(--soft);color:#1c52a9}.step.done{background:#e6f6ef;color:var(--green)}.status{padding:12px 13px;background:#f1f4f8;border-radius:10px;color:#526176;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}.status.error{background:#fff0f0;color:var(--red)}.status.success{background:#e8f7ef;color:var(--green)}.audioBox{padding:14px;background:#f7f9fc;border:1px solid #e8edf4;border-radius:13px;margin-top:12px}.audioBox strong{font-size:14px}.audioBox audio{width:100%;margin:8px 0 4px}.audioBox .actions{margin-top:4px}.result{background:#f8faff;border:1px solid #dce7fa;border-radius:12px;padding:14px;min-height:66px;font-size:20px;overflow-wrap:anywhere}.mini{font-size:12px;color:var(--muted)}.foot{font-size:12px;color:var(--muted);line-height:1.9}a{color:var(--blue)}.hide{display:none!important}canvas{display:block;width:100%;height:82px;background:#f7f9fc;border:1px solid #e6edf7;border-radius:10px;margin-top:10px}.pill{display:inline-block;border:1px solid #d7e0ef;border-radius:30px;padding:3px 9px;font-size:11px;color:#5a6a82}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.topspace{margin-top:12px}@media(max-width:420px){.card{padding:15px}.grid{grid-template-columns:1fr 1fr}.actions button,.actions .btn{flex:1;min-width:110px}.steps{gap:4px}.step{font-size:11px}}
+:root{color-scheme:light;--ink:#182334;--muted:#687487;--line:#e1e5eb;--blue:#2765d5;--pale:#edf3ff}
+*{box-sizing:border-box}body{margin:0;background:#fff;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;line-height:1.5}
+main{max-width:560px;margin:auto;padding:26px 18px 60px}h1{font-size:24px;letter-spacing:-.04em;margin:0 0 26px}label{display:block;font-size:13px;font-weight:700;margin:0 0 7px}input[type=text],select{width:100%;border:1px solid #c8d0dc;border-radius:11px;padding:12px 13px;font-size:17px;color:var(--ink);background:#fff;min-height:49px}input[type=file]{width:100%;font-size:13px}button{border:0;border-radius:11px;padding:12px 16px;background:var(--blue);color:#fff;font-weight:700;font-size:15px;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.primary{width:100%;font-size:17px;min-height:53px;margin-top:15px}.outline{background:var(--pale);color:#2057b8}.quiet{background:#f2f4f7;color:#3c4a60}.group{margin:0 0 24px}.section{border-top:1px solid var(--line);padding-top:23px;margin-top:23px}.hide{display:none!important}.status{font-size:13px;color:var(--muted);margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}.status.error{color:#b52e39}.status.success{color:#16744c}audio{width:100%;display:block;margin:9px 0 13px}.audio-title{font-weight:700;font-size:14px}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}.actions>*{flex:1}.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700;background:var(--pale);color:#2057b8;min-height:43px}.result{font-size:25px;font-weight:700;padding:16px;background:#f5f8ff;border-radius:12px;min-height:67px;overflow-wrap:anywhere}.small{font-size:12px;color:var(--muted)}.candidate{margin-top:8px;color:var(--muted);font-size:13px;overflow-wrap:anywhere}.candidate strong{color:var(--ink);font-weight:600}details{border-top:1px solid var(--line);margin-top:24px;padding-top:15px}summary{font-size:14px;font-weight:700;cursor:pointer}details .field{margin-top:14px}.footer{font-size:11px;color:var(--muted);margin-top:22px}.footer a{color:inherit}.space{margin-top:18px}
 </style>
 </head>
 <body><main>
-<div class="eyebrow">REVERSED SPEECH LAB</div>
 <h1>逆再生音声 実験室</h1>
-<p class="sub">単語を入力 → 日本語音声を生成 → 波形を逆再生 → Whisperで聞き取り。iPhoneのSafari向け・本番サイトとは独立した実験ページ。</p>
-<section class="card">
-<h2>① 実験する言葉</h2>
-<label for="word">読み上げる言葉</label>
-<input id="word" type="text" value="アイス" maxlength="80" autocomplete="off" spellcheck="false" placeholder="例：アイス">
-<div class="grid">
-<div><label for="speaker">VOICEVOXの話者</label><select id="speaker"><option value="3">ずんだもん（ノーマル）</option><option value="0">四国めたん（ノーマル）</option><option value="1">四国めたん（あまあま）</option><option value="8">春日部つむぎ（ノーマル）</option></select></div>
-<div><label for="language">Whisperの言語</label><select id="language"><option value="japanese">日本語に固定</option><option value="auto">自動判定</option></select></div>
+<div class="group"><label for="word">読み上げる言葉</label><input id="word" type="text" value="アイス" maxlength="80" autocomplete="off" spellcheck="false"><button id="start" class="primary">実験を開始する</button><div id="status" class="status" role="status" aria-live="polite"></div></div>
+<div id="media" class="section hide">
+<div class="audio-title">元の音声</div><audio id="originalAudio" controls playsinline preload="metadata"></audio>
+<div class="audio-title space">逆再生した音声</div><audio id="reverseAudio" controls playsinline preload="metadata"></audio>
+<div class="actions"><a id="originalDownload" class="btn" download="original.wav">元音声を保存</a><a id="reverseDownload" class="btn" download="reversed.wav">逆再生を保存</a></div>
 </div>
-<div class="grid">
-<div><label for="model">Whisperの認識モデル</label><select id="model"><option value="base" selected>精度優先（base）</option><option value="tiny">軽量（tiny）</option></select></div>
-<div><label for="beams">聞き取りの探索</label><select id="beams"><option value="5" selected>丁寧（5候補を探索）</option><option value="1">高速（1候補）</option></select></div>
+<div id="report" class="section hide">
+<label>AIの聞き取り</label><div id="asrText" class="result">解析中…</div>
+<div id="alternates" class="candidate hide"></div>
+<div class="actions"><button id="runAsr" class="outline" type="button">もう一度聞き取る</button></div>
+<div class="space"><label for="human">実際に聞こえた言葉</label><input id="human" type="text" placeholder="例：うしあ" spellcheck="false" autocomplete="off"></div>
+<div class="actions"><button id="copy" class="quiet" type="button">結果をコピー</button></div>
 </div>
-<p class="hint">「よし」のような誤認識を減らすため、標準ではWhisper baseと日本語固定を使用します。iPhoneで重い場合はtinyに変更してください。音声からの認識結果は保証されません。</p>
-<label class="check"><input id="autoAsr" type="checkbox" checked><span>音声生成後、Whisperの聞き取りまで自動実行する<span class="hint" style="display:block">初回はAIモデルをダウンロードします。iPhoneではメモリ不足で停止する場合があります。</span></span></label>
-<button id="start" class="primary">▶ 実験を開始する</button>
-<div class="steps" aria-label="実験の進捗"><div id="s1" class="step">1 音声生成</div><div id="s2" class="step">2 逆再生</div><div id="s3" class="step">3 AI聞き取り</div></div>
-<div id="status" class="status" role="status" aria-live="polite">準備完了。「実験を開始する」を押してください。</div>
-</section>
-<section id="media" class="card hide">
-<h2>② 音声を比較する</h2>
-<div class="audioBox"><div class="row"><strong>元の音声</strong><span id="originMeta" class="pill">—</span></div><audio id="originalAudio" controls playsinline preload="metadata"></audio><div class="actions"><a id="originalDownload" class="btn secondary" download="original.wav">元音声を保存</a></div></div>
-<div class="audioBox"><div class="row"><strong>逆再生した音声</strong><span id="reverseMeta" class="pill">—</span></div><audio id="reverseAudio" controls playsinline preload="metadata"></audio><canvas id="wave" aria-label="逆再生音声の波形"></canvas><div class="actions"><a id="reverseDownload" class="btn secondary" download="reversed.wav">逆再生を保存</a><button id="runAsr" class="secondary" type="button">AIで聞き取る</button></div></div>
-</section>
-<section id="report" class="card hide">
-<h2>③ 聞き取り結果</h2>
-<div class="mini">Whisperが逆再生音声から認識した文字（正解とは限りません）</div>
-<div id="asrMeta" class="mini topspace">モデル：未実行</div>
-<div id="asrText" class="result topspace">未実行</div>
-<div class="grid"><div><label for="human">自分にはどう聞こえた？</label><input id="human" type="text" placeholder="例：うしあ"></div><div><label for="notes">メモ</label><input id="notes" type="text" placeholder="例：最後が聞き取りにくい"></div></div>
-<div class="actions"><button id="copy" class="secondary" type="button">結果をコピー</button><button id="saveJson" class="quiet" type="button">記録をJSONで保存</button></div>
-<p class="hint">AIの聞き取りと、人間の聞き取りを分けて記録します。単語のローマ字を反転した結果を、AIの実測結果として扱いません。</p>
-</section>
-<section class="card">
-<h2>外部サービスが使えない場合</h2>
-<p class="hint">無料のVOICEVOX互換APIは混雑・回数制限・ブラウザの通信制限（CORS）で失敗することがあります。その場合、WAVを選べば逆再生とWhisperをこのページで試せます。</p>
-<label for="upload" class="topspace">読み上げ済みの音声を読み込む（WAV・MP3など）</label>
-<input id="upload" type="file" accept="audio/*,.wav,.mp3,.m4a">
-<div class="actions topspace"><a id="externalTts" href="https://voicevox.su-shiki.com/simple/" target="_blank" rel="noopener" class="btn quiet">VOICEVOX Web版を開く</a></div>
-</section>
-<section class="card">
-<h2>この実験の注意点</h2>
-<div class="foot">
-・音声生成には非公式の <a href="https://voicevox.su-shiki.com/su-shikiapis/ttsquest/" target="_blank" rel="noopener">WEB版VOICEVOX API（低速）</a>を使用し、入力した文字を送信します。APIキーは使用しません。利用制限や停止があります。<br>
-・文字起こしには <a href="https://huggingface.co/Xenova/whisper-base" target="_blank" rel="noopener">Whisper base</a> または <a href="https://huggingface.co/Xenova/whisper-tiny" target="_blank" rel="noopener">Whisper tiny</a> の多言語モデルをブラウザ内で使用します。初回はモデルをダウンロードします。認識用の音声は文字起こしサービスへ送信しません。<br>
-・iPhoneのメモリ制限により、Whisperが読み込めないことがあります。これは実装上の制約で、必ず動作する保証はありません。<br>
-・音声の逆再生は文字列の逆順ではなく、サンプル列を時間反転します。<br>
-・音声の利用時は <a href="https://voicevox.hiroshiba.jp/" target="_blank" rel="noopener">VOICEVOXと各音声ライブラリの規約</a>に従ってください。VOICEVOX：ずんだもん（選択した話者に応じて表記を変更してください）。<br>
-・結果は自動送信・自動保存しません。ページを閉じると入力内容は失われます。GitHub Pagesで公開する場合はURLを知る人が閲覧できます。検索エンジン除外は保証できません。
-</div>
-</section>
-<div class="foot" style="text-align:center">逆再生音声 実験室 / index.html 単一ファイル版・認識精度改善版</div>
+<details><summary>設定・音声ファイル読み込み</summary>
+<div class="field"><label for="speaker">VOICEVOXの話者</label><select id="speaker"><option value="3">ずんだもん</option><option value="0">四国めたん</option><option value="8">春日部つむぎ</option></select></div>
+<div class="field"><label for="model">Whisperのモデル</label><select id="model"><option value="base">base（精度優先）</option><option value="tiny">tiny（軽量）</option></select></div>
+<div class="field"><label for="upload">音声ファイルを読み込む</label><input id="upload" type="file" accept="audio/*,.wav,.mp3,.m4a"></div>
+</details>
+<div class="footer"><a href="https://voicevox.hiroshiba.jp/" target="_blank" rel="noopener" id="credit">VOICEVOX：ずんだもん</a> · Whisper</div>
 </main>
 <script type="module">
 const $=id=>document.getElementById(id);
-let ctx=null,sourceBuffer=null,reverseBuffer=null,sourceUrl=null,reverseUrl=null,wordAtRun='',asrOutput='',busy=false;
+let ctx,sourceBuffer,reverseBuffer,sourceUrl,reverseUrl,wordAtRun='',aiResult='',aiAlternate='',busy=false;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-function status(message,type=''){const el=$('status');el.textContent=message;el.className='status'+(type?' '+type:'')}
-function stage(n,state){$('s'+n).className='step '+state}
-function clearStages(){for(let i=1;i<=3;i++)stage(i,'')}
+function status(msg,kind=''){$('status').textContent=msg;$('status').className='status '+kind}
 function setBusy(v){busy=v;$('start').disabled=v;$('runAsr').disabled=v}
-function getContext(){return ctx??(ctx=new (window.AudioContext||window.webkitAudioContext)())}
-function setAudio(id,dl,blob,oldUrl,name){if(oldUrl)URL.revokeObjectURL(oldUrl);const url=URL.createObjectURL(blob);$(id).src=url;$(dl).href=url;$(dl).download=name;return url}
-function reverseSamples(buffer){const out=getContext().createBuffer(buffer.numberOfChannels,buffer.length,buffer.sampleRate);for(let ch=0;ch<buffer.numberOfChannels;ch++){const a=buffer.getChannelData(ch),b=out.getChannelData(ch);for(let i=0,n=a.length;i<n;i++)b[i]=a[n-1-i]}return out}
-function writeWav(buffer){const channels=buffer.numberOfChannels,samples=buffer.length,rate=buffer.sampleRate;const bytes=new ArrayBuffer(44+samples*channels*2),v=new DataView(bytes);const ascii=(off,s)=>{for(let i=0;i<s.length;i++)v.setUint8(off+i,s.charCodeAt(i))};ascii(0,'RIFF');v.setUint32(4,36+samples*channels*2,true);ascii(8,'WAVE');ascii(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,channels,true);v.setUint32(24,rate,true);v.setUint32(28,rate*channels*2,true);v.setUint16(32,channels*2,true);v.setUint16(34,16,true);ascii(36,'data');v.setUint32(40,samples*channels*2,true);let p=44;for(let i=0;i<samples;i++)for(let c=0;c<channels;c++){const s=Math.max(-1,Math.min(1,buffer.getChannelData(c)[i]));v.setInt16(p,s<0?s*32768:s*32767,true);p+=2}return new Blob([bytes],{type:'audio/wav'})}
-function drawWave(buffer){const canvas=$('wave'),rect=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.max(100,Math.floor(rect.width*dpr));canvas.height=Math.floor(82*dpr);const g=canvas.getContext('2d');g.clearRect(0,0,canvas.width,canvas.height);g.strokeStyle='#2d68d5';g.lineWidth=Math.max(1,dpr);const data=buffer.getChannelData(0),mid=canvas.height/2,step=Math.max(1,Math.floor(data.length/canvas.width));g.beginPath();for(let x=0;x<canvas.width;x++){let max=0;for(let j=x*step;j<Math.min(data.length,(x+1)*step);j++)max=Math.max(max,Math.abs(data[j]));g.moveTo(x,mid-max*mid*.9);g.lineTo(x,mid+max*mid*.9)}g.stroke()}
-async function acceptAudio(data,label){const buffer=await getContext().decodeAudioData(data.slice(0));if(!buffer.length)throw Error('音声データが空です');sourceBuffer=buffer;reverseBuffer=reverseSamples(buffer);const filename=($('word').value.trim()||'audio').replace(/[\\/:*?"<>|\s]/g,'_').slice(0,30);sourceUrl=setAudio('originalAudio','originalDownload',writeWav(buffer),sourceUrl,filename+'_original.wav');reverseUrl=setAudio('reverseAudio','reverseDownload',writeWav(reverseBuffer),reverseUrl,filename+'_reversed.wav');$('originMeta').textContent=(buffer.duration.toFixed(2)+'秒');$('reverseMeta').textContent='波形を時間反転';$('media').classList.remove('hide');$('report').classList.remove('hide');$('asrText').textContent='未実行';$('asrMeta').textContent='モデル：未実行';asrOutput='';$('human').value='';$('notes').value='';drawWave(reverseBuffer);stage(2,'done');status(label+'：逆再生音声を作成しました。','success')}
-function safeAudioUrl(url){try{const u=new URL(url);return u.protocol==='https:'&&(/^audio[0-9]+\.tts\.quest$/.test(u.hostname))}catch{return false}}
-async function getVoicevox(text,speaker){const u=new URL('https://api.tts.quest/v3/voicevox/synthesis');u.searchParams.set('text',text);u.searchParams.set('speaker',speaker);status('VOICEVOXへ音声生成を依頼しています…');const res=await fetch(u.toString(),{cache:'no-store'});if(!res.ok)throw Error('音声生成APIの応答エラー（HTTP '+res.status+'）。時間をおいて再試行してください');const info=await res.json();if(!info.success){const wait=info.retryAfter?' 約'+info.retryAfter+'秒後に再試行してください。':'';throw Error('音声生成が制限されました。'+wait)}if(!safeAudioUrl(info.wavDownloadUrl)||!safeAudioUrl(info.audioStatusUrl))throw Error('音声URLが確認できませんでした');for(let n=0;n<65;n++){status('VOICEVOXで音声を生成中… '+(n*2)+'秒経過');let r;try{r=await fetch(info.audioStatusUrl,{cache:'no-store'})}catch(e){throw Error('生成状況を読み取れません。CORS制限の可能性があります。')}if(r.ok){const s=await r.json();if(s.isAudioError)throw Error('VOICEVOX側で音声生成に失敗しました');if(s.isAudioReady){const wav=await fetch(info.wavDownloadUrl,{cache:'no-store'});if(!wav.ok)throw Error('完成した音声を取得できません（HTTP '+wav.status+'）');return await wav.arrayBuffer()}}await sleep(2000)}throw Error('音声生成が時間内に完了しませんでした。少し待って再試行してください')}
-function downsampleMono(buffer,target=16000){const n=Math.max(1,Math.round(buffer.duration*target)),out=new Float32Array(n),channels=buffer.numberOfChannels,src=Array.from({length:channels},(_,i)=>buffer.getChannelData(i));for(let i=0;i<n;i++){const pos=i*buffer.sampleRate/target,j=Math.min(buffer.length-1,Math.floor(pos)),k=Math.min(buffer.length-1,j+1),f=pos-j;let v=0;for(let c=0;c<channels;c++)v+=src[c][j]*(1-f)+src[c][k]*f;out[i]=v/channels}return out}
-function padAudio(audio,seconds=0.3){const padding=Math.round(16000*seconds);const out=new Float32Array(audio.length+2*padding);out.set(audio,padding);return out}
-async function runWhisper(){
- if(!reverseBuffer)throw Error('先に音声を生成するか、ファイルを読み込んでください');
- stage(3,'active');$('asrText').textContent='AIモデルを準備しています…';
- const model=$('model').value,beams=Number($('beams').value),modelName='Xenova/whisper-'+model;
- $('asrMeta').textContent='モデル：Whisper '+model+' / 探索数：'+beams;
- status('Whisper '+model+' を読み込み中。初回はモデルのダウンロードが必要です。iPhoneではメモリ不足で停止する場合があります。');
- try{
-  const {pipeline,env}=await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
-  env.allowLocalModels=false;env.useBrowserCache=true;
-  const transcriber=await pipeline('automatic-speech-recognition',modelName,{quantized:true,progress_callback:(p)=>{
-   if(p.status==='progress'&&Number.isFinite(p.progress))status('Whisper '+model+' をダウンロード中：'+Math.round(p.progress)+'%')
-  }});
-  status('逆再生音声をWhisper '+model+' で解析しています…');
-  const opts={task:'transcribe',num_beams:beams,temperature:0};
-  if($('language').value!=='auto')opts.language='japanese';
-  // 音声の先頭・末尾に短い無音を足し、逆再生された語頭・語尾の欠落を避ける。
-  const output=await transcriber(padAudio(downsampleMono(reverseBuffer)),opts);
-  asrOutput=typeof output?.text==='string'?output.text.trim():'';
-  $('asrText').textContent=asrOutput||'（認識された文字はありませんでした）';
-  stage(3,'done');status('解析完了。逆再生音声を聞いて、AIの認識と比較してください。','success');
- }catch(e){
-  stage(3,'');$('asrText').textContent='聞き取り未完了';
-  throw Error('Whisper '+model+' の実行に失敗しました。iPhoneのメモリ不足・ネットワーク・モデル読み込みの問題が考えられます。モデルを「軽量（tiny）」に変更して再試行できます。詳細：'+(e?.message||String(e)))
- }
-}
-$('start').addEventListener('click',async()=>{if(busy)return;const text=$('word').value.trim();if(!text){status('読み上げる言葉を入力してください','error');return}setBusy(true);clearStages();stage(1,'active');wordAtRun=text;try{const data=await getVoicevox(text,$('speaker').value);stage(1,'done');stage(2,'active');await acceptAudio(data,'VOICEVOX音声');if($('autoAsr').checked)await runWhisper();else status('逆再生音声ができました。「AIで聞き取る」で続行できます。','success')}catch(e){status((e?.message||String(e))+'\n※無料APIの通信が失敗した場合は、下のファイル読み込みも使えます。','error')}finally{setBusy(false)}});
-$('upload').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;if(busy)return;setBusy(true);clearStages();stage(1,'done');stage(2,'active');wordAtRun=$('word').value.trim();try{await acceptAudio(await file.arrayBuffer(),'ファイル読込');if($('autoAsr').checked)await runWhisper()}catch(err){status(err?.message||String(err),'error')}finally{setBusy(false)}});
-$('runAsr').addEventListener('click',async()=>{if(busy)return;setBusy(true);try{await runWhisper()}catch(e){status(e?.message||String(e),'error')}finally{setBusy(false)}});
-function reportData(){return {word:wordAtRun||$('word').value.trim(),speaker:$('speaker').selectedOptions[0]?.textContent||'',whisper_language:$('language').value,whisper_model:$('model').value,whisper_beams:Number($('beams').value),whisper_result:asrOutput||null,human_result:$('human').value.trim()||null,notes:$('notes').value.trim()||null,generated_at:new Date().toISOString(),audio_reversed:!!reverseBuffer}}
-$('copy').addEventListener('click',async()=>{const d=reportData(),s='元の言葉：'+d.word+'\nWhisper：'+(d.whisper_result??'未取得')+'\n自分の聞き取り：'+(d.human_result??'未記入')+'\nメモ：'+(d.notes??'');try{await navigator.clipboard.writeText(s);status('結果をコピーしました','success')}catch{status('コピーできませんでした。JSON保存をお試しください。','error')}});
-$('saveJson').addEventListener('click',()=>{const b=new Blob([JSON.stringify(reportData(),null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='reverse-speech-result.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)});
+function context(){return ctx??(ctx=new (window.AudioContext||window.webkitAudioContext)())}
+function audioUrl(id,download,blob,old,name){if(old)URL.revokeObjectURL(old);const url=URL.createObjectURL(blob);$(id).src=url;$(download).href=url;$(download).download=name;return url}
+function reverseAudio(buffer){const b=context().createBuffer(buffer.numberOfChannels,buffer.length,buffer.sampleRate);for(let c=0;c<buffer.numberOfChannels;c++){const a=buffer.getChannelData(c),o=b.getChannelData(c);for(let i=0;i<a.length;i++)o[i]=a[a.length-1-i]}return b}
+function wav(buffer){const n=buffer.length,c=buffer.numberOfChannels,r=buffer.sampleRate,ab=new ArrayBuffer(44+n*c*2),v=new DataView(ab);const txt=(p,s)=>{for(let i=0;i<s.length;i++)v.setUint8(p+i,s.charCodeAt(i))};txt(0,'RIFF');v.setUint32(4,36+n*c*2,true);txt(8,'WAVE');txt(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,c,true);v.setUint32(24,r,true);v.setUint32(28,r*c*2,true);v.setUint16(32,c*2,true);v.setUint16(34,16,true);txt(36,'data');v.setUint32(40,n*c*2,true);let p=44;const channels=Array.from({length:c},(_,i)=>buffer.getChannelData(i));for(let i=0;i<n;i++)for(let j=0;j<c;j++){const s=Math.max(-1,Math.min(1,channels[j][i]));v.setInt16(p,s<0?s*32768:s*32767,true);p+=2}return new Blob([ab],{type:'audio/wav'})}
+async function acceptAudio(data){const b=await context().decodeAudioData(data.slice(0));if(!b.length)throw Error('音声データが空です');sourceBuffer=b;reverseBuffer=reverseAudio(b);const name=($('word').value.trim()||'audio').replace(/[\\/:*?"<>|\s]/g,'_').slice(0,25);sourceUrl=audioUrl('originalAudio','originalDownload',wav(b),sourceUrl,name+'_original.wav');reverseUrl=audioUrl('reverseAudio','reverseDownload',wav(reverseBuffer),reverseUrl,name+'_reversed.wav');$('media').classList.remove('hide');$('report').classList.remove('hide');$('asrText').textContent='解析中…';$('alternates').classList.add('hide');$('human').value='';aiResult='';aiAlternate=''}
+function trusted(url){try{const u=new URL(url);return u.protocol==='https:'&&/^audio[0-9]+\.tts\.quest$/.test(u.hostname)}catch{return false}}
+async function synthesize(text,speaker){const u=new URL('https://api.tts.quest/v3/voicevox/synthesis');u.searchParams.set('text',text);u.searchParams.set('speaker',speaker);status('音声を生成中…');const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('音声生成に失敗しました（'+r.status+'）');const info=await r.json();if(!info.success)throw Error('音声生成が制限されています。時間をおいて再試行してください');if(!trusted(info.wavDownloadUrl)||!trusted(info.audioStatusUrl))throw Error('音声のURLを確認できませんでした');for(let i=0;i<65;i++){const s=await fetch(info.audioStatusUrl,{cache:'no-store'});if(s.ok){const j=await s.json();if(j.isAudioError)throw Error('音声生成に失敗しました');if(j.isAudioReady){const w=await fetch(info.wavDownloadUrl,{cache:'no-store'});if(!w.ok)throw Error('音声を取得できませんでした');return w.arrayBuffer()}}await sleep(2000)}throw Error('音声生成がタイムアウトしました')}
+function mono16(buffer){const rate=16000,n=Math.max(1,Math.round(buffer.duration*rate)),out=new Float32Array(n),src=Array.from({length:buffer.numberOfChannels},(_,i)=>buffer.getChannelData(i));for(let i=0;i<n;i++){const pos=i*buffer.sampleRate/rate,j=Math.min(buffer.length-1,Math.floor(pos)),k=Math.min(buffer.length-1,j+1),f=pos-j;let sum=0;for(const ch of src)sum+=ch[j]*(1-f)+ch[k]*f;out[i]=sum/src.length}return out}
+function normalize(x){let max=0;for(const v of x)max=Math.max(max,Math.abs(v));const gain=max>0?Math.min(2.8,.88/max):1;const out=new Float32Array(x.length);for(let i=0;i<x.length;i++)out[i]=x[i]*gain;return out}
+function withSilence(audio,repeat){const pad=8000,gap=repeat?6400:0,parts=repeat?3:1;const out=new Float32Array(pad*2+audio.length*parts+gap*(parts-1));let p=pad;for(let i=0;i<parts;i++){out.set(audio,p);p+=audio.length+gap}return out}
+function tidy(text){return (text||'').trim().replace(/^[\s、。，．!！?？「」『』]+|[\s、。，．!！?？「」『』]+$/g,'')}
+async function recognize(){if(!reverseBuffer)throw Error('先に音声を作成してください');status('AIで聞き取り中…');$('asrText').textContent='解析中…';$('alternates').classList.add('hide');const model=$('model').value;try{
+ const {pipeline,env}=await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');env.allowLocalModels=false;env.useBrowserCache=true;
+ const transcriber=await pipeline('automatic-speech-recognition','Xenova/whisper-'+model,{quantized:true,progress_callback:p=>{if(p.status==='progress'&&Number.isFinite(p.progress))status('AIモデルを準備中… '+Math.round(p.progress)+'%')}});
+ const signal=normalize(mono16(reverseBuffer));const options={task:'transcribe',language:'japanese',num_beams:5,temperature:0};
+ // 短い単語の認識を安定させるため、無音で区切った3回分を先に解析する。
+ const repeated=await transcriber(withSilence(signal,true),options);aiResult=tidy(repeated?.text);
+ // 単独音声も独立して認識し、結果が異なる場合は両方表示する。正解の文字列は与えない。
+ const single=await transcriber(withSilence(signal,false),options);aiAlternate=tidy(single?.text);
+ $('asrText').textContent=aiResult||aiAlternate||'認識できませんでした';
+ if(aiAlternate&&aiAlternate!==aiResult){$('alternates').textContent='別の認識結果：'+aiAlternate;$('alternates').classList.remove('hide')}
+ status('完了','success');
+ }catch(e){$('asrText').textContent='認識できませんでした';throw Error('AIの実行に失敗しました。'+(e?.message||String(e)))}}
+$('start').addEventListener('click',async()=>{if(busy)return;const text=$('word').value.trim();if(!text){status('言葉を入力してください','error');return}setBusy(true);wordAtRun=text;try{const a=await synthesize(text,$('speaker').value);await acceptAudio(a);$('credit').textContent='VOICEVOX：'+$('speaker').selectedOptions[0].textContent;await recognize()}catch(e){status(e?.message||String(e),'error')}finally{setBusy(false)}});
+$('upload').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f||busy)return;setBusy(true);wordAtRun=$('word').value.trim();try{await acceptAudio(await f.arrayBuffer());await recognize()}catch(err){status(err?.message||String(err),'error')}finally{setBusy(false)}});
+$('runAsr').addEventListener('click',async()=>{if(busy)return;setBusy(true);try{await recognize()}catch(e){status(e?.message||String(e),'error')}finally{setBusy(false)}});
+$('copy').addEventListener('click',async()=>{const s='元の言葉：'+(wordAtRun||$('word').value.trim())+'\nAI：'+(aiResult||'未認識')+(aiAlternate&&aiAlternate!==aiResult?'\nAI別候補：'+aiAlternate:'')+'\n実際の聞き取り：'+$('human').value.trim();try{await navigator.clipboard.writeText(s);status('コピーしました','success')}catch{status('コピーできませんでした','error')}});
 </script>
-</body></html>
+</body>
+</html>
