@@ -13,7 +13,7 @@ main{max-width:560px;margin:auto;padding:26px 18px 60px}.page-header{display:fle
 </style>
 </head>
 <body><main>
-<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.1.7</span></div>
+<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.1.8</span></div>
 <div class="group"><label for="word">読み上げる言葉</label><input id="word" type="text" value="アイス" maxlength="80" autocomplete="off" spellcheck="false"><button id="start" class="primary">実験を開始する</button><div id="status" class="status" role="status" aria-live="polite"></div></div>
 <div id="media" class="section hide">
 <div class="audio-title">元の音声</div><audio id="originalAudio" controls playsinline preload="metadata"></audio>
@@ -21,8 +21,8 @@ main{max-width:560px;margin:auto;padding:26px 18px 60px}.page-header{display:fle
 <div class="actions"><a id="originalDownload" class="btn" download="original.wav">元音声を保存</a><a id="reverseDownload" class="btn" download="reversed.wav">逆再生を保存</a></div>
 </div>
 <div id="report" class="section hide">
-<label>音素AIの聞き取り</label><div id="asrText" class="result">解析中…</div><div id="phonemes" class="candidate hide"></div><div id="phonemeCandidates" class="candidate hide"></div><div id="onsetCandidates" class="candidate hide"></div>
-<div class="actions"><button id="copyAi" class="outline" type="button" disabled>聞き取りをコピー</button><button id="runAsr" class="quiet" type="button">音素AIで再認識</button><button id="tryOnset" class="quiet" type="button">先頭音を強調して解析</button></div>
+<label>AIの聞き取り</label><div id="asrText" class="result">解析中…</div><div id="phonemes" class="candidate hide"></div><div id="phonemeCandidates" class="candidate hide"></div><div id="onsetCandidates" class="candidate hide"></div>
+<div class="actions"><button id="copyAi" class="outline" type="button" disabled>聞き取りをコピー</button><button id="runAsr" class="quiet" type="button">音素AIで再認識</button><button id="tryOnset" class="quiet" type="button">先頭母音を音響解析</button></div>
 <div class="actions"><button id="variants" class="quiet" type="button">Whisperでも聞き取る</button></div><div id="alternatives" class="candidate hide"></div>
 <div class="space"><label for="human">実際に聞こえた言葉</label><input id="human" type="text" placeholder="例：うしあ" spellcheck="false" autocomplete="off"></div>
 <div class="actions"><button id="copy" class="quiet" type="button">結果をコピー</button></div>
@@ -216,11 +216,15 @@ async function recognize(){
   output.logits.dispose?.();
   const decoded=phonesToKana(raw);
   // 主表示はビーム探索の最高スコア候補。従来の単純な最大値列も参考として残す。
-  aiResult=candidates[0]?.kana||decoded.kana;
+  const phonemeOnly=candidates[0]?.kana||decoded.kana;
+  // CTC音素列と独立したLPC母音推定を組み合わせる。期待する単語やユーザー入力は参照しない。
+  const acoustic=analyzeFirstVowel(reverseBuffer);
+  const adjusted=acoustic.decision==='う寄り'&&phonemeOnly.startsWith('お');
+  aiResult=adjusted?'う'+phonemeOnly.slice(1):phonemeOnly;
   $('asrText').textContent=aiResult||'音素を認識できませんでした';
   $('copyAi').disabled=!aiResult;
   const box=$('phonemes');box.classList.remove('hide');
-  box.textContent='単純認識の音素：'+(raw||'（なし）')+(decoded.unknown.length?' / 未変換：'+decoded.unknown.join(' '):'');
+  box.textContent=(adjusted?'音素AI単独：'+phonemeOnly+' / 音響推定：'+acoustic.decision+'（統合結果に反映）\n':'')+'単純認識の音素：'+(raw||'（なし）')+(decoded.unknown.length?' / 未変換：'+decoded.unknown.join(' '):'');
   const other=$('phonemeCandidates');
   if(candidates.length>1){
    other.classList.remove('hide');
@@ -229,41 +233,85 @@ async function recognize(){
   status('完了','success');
  }catch(e){$('asrText').textContent='音素認識に失敗しました';throw Error('音素AIの実行に失敗しました。'+(e?.message||String(e)))}
 }
-// 逆再生の先頭にある弱い母音を強調する実験。
-// 特定の単語や期待する読みを参照せず、実際の音響データを加工して同じモデルに再入力する。
-function enhanceOnset(signal){
- const out=new Float32Array(signal.length);let peak=0;
- for(let i=0;i<signal.length;i++){
-  const t=i/16000;
-  // 0.10〜0.34秒付近の弱い音を強調し、0.46秒までに元の音量に戻す。
-  const gain=t<.10?1.0:t<.16?1+1.7*(t-.10)/.06:t<.34?2.7:t<.46?1+1.7*(.46-t)/.12:1;
-  out[i]=signal[i]*gain;peak=Math.max(peak,Math.abs(out[i]));
+// 音素モデルとは独立した母音の音響解析（LPCスペクトル包絡）。
+// 日本語の「う」「お」は個人差・逆再生による変化が大きいため、参考候補として示す。
+// 音素モデルの出力を黙って書き換えることはしない。
+function lpcEnvelopePeaks(signal, sampleRate=16000, order=18){
+ const n=signal.length;
+ if(n<order*5)return null;
+ const samples=new Float64Array(n), autocorr=new Float64Array(order+1);
+ let mean=0;for(const v of signal)mean+=v;mean/=n;
+ for(let i=0;i<n;i++){
+  const pre=(signal[i]-mean)-(i>0?.95*(signal[i-1]-mean):0);
+  samples[i]=pre*(.54-.46*Math.cos(2*Math.PI*i/(n-1)));
  }
- const scale=peak>.95?.95/peak:1;
- if(scale!==1)for(let i=0;i<out.length;i++)out[i]*=scale;
- return out;
+ for(let lag=0;lag<=order;lag++)for(let i=lag;i<n;i++)autocorr[lag]+=samples[i]*samples[i-lag];
+ if(autocorr[0]<1e-9)return null;
+ let coeff=new Float64Array(order+1);coeff[0]=1;let error=autocorr[0];
+ for(let i=1;i<=order;i++){
+  let acc=autocorr[i];for(let j=1;j<i;j++)acc+=coeff[j]*autocorr[i-j];
+  const k=Math.max(-.999,Math.min(.999,-acc/Math.max(error,1e-12)));
+  const next=coeff.slice();next[i]=k;
+  for(let j=1;j<i;j++)next[j]=coeff[j]+k*coeff[i-j];
+  coeff=next;error*=1-k*k;
+ }
+ const mags=[];
+ for(let hz=200;hz<=3200;hz+=20){
+  let re=1,im=0;
+  for(let j=1;j<=order;j++){const phase=2*Math.PI*hz*j/sampleRate;re+=coeff[j]*Math.cos(phase);im-=coeff[j]*Math.sin(phase)}
+  mags.push({hz,amp:1/Math.max(1e-8,Math.hypot(re,im))});
+ }
+ const peaks=[];
+ for(let i=2;i<mags.length-2;i++){
+  if(mags[i].amp>mags[i-1].amp&&mags[i].amp>mags[i+1].amp)peaks.push(mags[i]);
+ }
+ const first=peaks.filter(p=>p.hz>=230&&p.hz<=900).sort((a,b)=>b.amp-a.amp)[0];
+ const second=peaks.filter(p=>p.hz>=950&&p.hz<=2700&&(!first||p.hz>first.hz+350)).sort((a,b)=>b.amp-a.amp)[0];
+ return first&&second?{f1:first.hz,f2:second.hz}:null;
+}
+function analyzeFirstVowel(buffer){
+ const samples=mono16(buffer),rate=16000;
+ // 20msごとの実効値で音声の開始位置を求める。
+ const hop=320,levels=[];let max=0;
+ for(let i=0;i+hop<=samples.length;i+=hop){
+  let energy=0;for(let j=i;j<i+hop;j++)energy+=samples[j]*samples[j];
+  const rms=Math.sqrt(energy/hop);levels.push(rms);max=Math.max(max,rms);
+ }
+ const threshold=Math.max(.0025,max*.035);
+ let onset=-1;
+ for(let i=2;i<levels.length-2;i++)if(levels[i]>threshold&&levels[i+1]>threshold){onset=i*hop/rate;break}
+ if(onset<0)return {decision:'不明',reason:'音声の開始位置を特定できませんでした'};
+ const frames=[];
+ for(let k=0;k<6;k++){
+  const a=Math.round((onset+.018+k*.018)*rate),b=a+Math.round(.035*rate);
+  if(b>samples.length)break;
+  const frame=samples.subarray(a,b);let energy=0;for(const v of frame)energy+=v*v;
+  if(Math.sqrt(energy/frame.length)<threshold*.8)continue;
+  const peak=lpcEnvelopePeaks(frame);
+  if(peak)frames.push(peak);
+ }
+ if(frames.length<3)return {decision:'不明',reason:'分析に必要な母音区間が不足しています'};
+ const median=(arr)=>arr.slice().sort((a,b)=>a-b)[Math.floor(arr.length/2)];
+ const f1=median(frames.map(v=>v.f1)),f2=median(frames.map(v=>v.f2));
+ let decision='判定保留';
+ if(f1<=470&&f2>=1550)decision='う寄り';
+ else if(f1>=440&&f2<=1450)decision='お寄り';
+ return {decision,f1,f2,frames:frames.length,onset};
 }
 async function tryOnset(){
  if(!reverseBuffer)throw Error('先に音声を作成してください');
- const box=$('onsetCandidates');box.classList.remove('hide');box.textContent='先頭音を解析中…';
- const recognizer=await getPhonemeRecognizer();
- const base=mono16(reverseBuffer),enhanced=enhanceOnset(base);
- const versions=[['先頭音を強調',enhanced],['先頭の無音を短縮',enhanced.subarray(Math.min(Math.floor(.075*16000),Math.floor(enhanced.length*.12)))]];
- const lines=[];
- for(const [label,signal] of versions){
-  status(label+'して認識中…');
-  const input=await recognizer.extractor(withSilence(signal));
-  const output=await recognizer.model(input);
-  try{
-   const candidates=decodeCtcCandidates(output.logits,recognizer.idToPhone,24,3);
-   const raw=decodeCtc(output.logits,recognizer.idToPhone);
-   const kana=candidates[0]?.kana||phonesToKana(raw).kana||'認識できませんでした';
-   const others=candidates.slice(1).map(c=>c.kana);
-   lines.push(label+'：'+kana+(others.length?'（別候補：'+others.join(' ／ ')+'）':''));
-   box.textContent=lines.join('\n');
-  }finally{output.logits.dispose?.()}
+ const box=$('onsetCandidates');box.classList.remove('hide');
+ const result=analyzeFirstVowel(reverseBuffer);
+ const modelText=aiResult||'未認識';
+ let message='先頭母音の音響推定：'+result.decision;
+ if(Number.isFinite(result.f1))message+='（F1 約'+result.f1+'Hz / F2 約'+result.f2+'Hz）';
+ if(result.reason)message+=' / '+result.reason;
+ // モデルが「お」で始まり、音響推定が「う寄り」の場合にだけ比較候補を示す。
+ if(result.decision==='う寄り'&&modelText.startsWith('お')){
+  message+='\n音響推定を考慮した別候補：う'+modelText.slice(1);
  }
- status('先頭音の再解析が完了しました','success');
+ message+='\n※独立した音響推定です。AIの元の認識結果は変更しません。';
+ box.textContent=message;status('母音の音響解析が完了しました','success');
 }
 async function tryVariants(){
  if(!reverseBuffer)throw Error('先に音声を作成してください');
