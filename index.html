@@ -13,7 +13,7 @@ main{max-width:560px;margin:auto;padding:26px 18px 60px}.page-header{display:fle
 </style>
 </head>
 <body><main>
-<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.1.2</span></div>
+<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.1.4</span></div>
 <div class="group"><label for="word">読み上げる言葉</label><input id="word" type="text" value="アイス" maxlength="80" autocomplete="off" spellcheck="false"><button id="start" class="primary">実験を開始する</button><div id="status" class="status" role="status" aria-live="polite"></div></div>
 <div id="media" class="section hide">
 <div class="audio-title">元の音声</div><audio id="originalAudio" controls playsinline preload="metadata"></audio>
@@ -59,16 +59,46 @@ async function getTranscriber(){
  const t=await pipeline('automatic-speech-recognition','Xenova/whisper-'+model,{quantized:true,progress_callback:p=>{if(p.status==='progress'&&Number.isFinite(p.progress))status('AIモデルを準備中… '+Math.round(p.progress)+'%')}});
  transcriberCache=t;transcriberModel=model;return t;
 }
-// 日本語音素認識用HuBERT-CTC（Whisperの文章予測とは独立）。初回モデル約63MB。
+// HuBERT音素認識モデルは tokenizer.json がないため pipeline() を使わず直接読み込む。
+// 出力は CTC ロジット。別途 vocab.json で音素IDへ戻す。
 async function getPhonemeRecognizer(){
  if(phonemeRecognizer)return phonemeRecognizer;
- status('日本語音素AIを準備中…（初回は約63MB）');
- const {pipeline,env}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
+ status('音素AIを準備中…（初回は約63MB）');
+ const {AutoFeatureExtractor,AutoModelForCTC,env}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
  env.allowLocalModels=false;env.useBrowserCache=true;
- phonemeRecognizer=await pipeline('automatic-speech-recognition','air-air/japanese-hubert-base-phoneme-ctc-v4-ONNX',{
-  dtype:'q4',device:'wasm',progress_callback:p=>{if(p.status==='progress'&&Number.isFinite(p.progress))status('音素AIをダウンロード中… '+Math.round(p.progress)+'%')}
- });
+ const modelId='air-air/japanese-hubert-base-phoneme-ctc-v4-ONNX';
+ const [extractor,model,vocabResponse]=await Promise.all([
+  AutoFeatureExtractor.from_pretrained(modelId),
+  AutoModelForCTC.from_pretrained(modelId,{dtype:'q4',device:'wasm',progress_callback:p=>{
+   if(p.status==='progress'&&Number.isFinite(p.progress))status('音素AIを準備中… '+Math.round(p.progress)+'%');
+  }}),
+  fetch('https://huggingface.co/prj-beatrice/japanese-hubert-base-phoneme-ctc-v4/resolve/main/vocab.json')
+ ]);
+ if(!vocabResponse.ok)throw Error('音素辞書の取得に失敗しました（'+vocabResponse.status+'）');
+ const vocab=await vocabResponse.json();
+ const idToPhone=[];
+ for(const [phone,id] of Object.entries(vocab))idToPhone[Number(id)]=phone;
+ phonemeRecognizer={extractor,model,idToPhone};
  return phonemeRecognizer;
+}
+function decodeCtc(logits,idToPhone){
+ const dims=logits.dims;
+ if(dims.length!==3||dims[0]!==1)throw Error('AI出力の形式が想定外です：'+dims.join('×'));
+ const frames=dims[1],classes=dims[2],data=logits.data;
+ const phones=[];let previous=-1;
+ for(let t=0;t<frames;t++){
+  const start=t*classes;let best=0,bestValue=-Infinity;
+  for(let c=0;c<classes;c++){
+   const value=data[start+c];
+   if(value>bestValue){bestValue=value;best=c}
+  }
+  if(best!==previous&&best!==0){
+   const phone=idToPhone[best];
+   if(phone&&!['PAD','UNK','SOS','EOS','sil','pau'].includes(phone))phones.push(phone);
+  }
+  previous=best;
+ }
+ return phones.join(' ');
 }
 // OpenJTalk音素を日本語の仮名に近似変換。音素が不明なら隠さずそのまま示す。
 const VOWELS={a:'あ',i:'い',u:'う',e:'え',o:'お'};
@@ -125,8 +155,11 @@ async function recognize(){
  $('alternatives').classList.add('hide');$('alternatives').textContent='';
  try{
   const recognizer=await getPhonemeRecognizer();
-  const result=await recognizer(withSilence(normalize(mono16(reverseBuffer))));
-  const raw=String(result?.text||'').trim();const decoded=phonesToKana(raw);
+  const input=await recognizer.extractor(withSilence(mono16(reverseBuffer)));
+  const output=await recognizer.model(input);
+  const raw=decodeCtc(output.logits,recognizer.idToPhone);
+  output.logits.dispose?.();
+  const decoded=phonesToKana(raw);
   aiResult=decoded.kana;
   $('asrText').textContent=aiResult||'音素を認識できませんでした';
   $('copyAi').disabled=!aiResult;
