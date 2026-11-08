@@ -13,7 +13,7 @@ main{max-width:560px;margin:auto;padding:26px 18px 60px}.page-header{display:fle
 </style>
 </head>
 <body><main>
-<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.1.4</span></div>
+<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.1.5</span></div>
 <div class="group"><label for="word">読み上げる言葉</label><input id="word" type="text" value="アイス" maxlength="80" autocomplete="off" spellcheck="false"><button id="start" class="primary">実験を開始する</button><div id="status" class="status" role="status" aria-live="polite"></div></div>
 <div id="media" class="section hide">
 <div class="audio-title">元の音声</div><audio id="originalAudio" controls playsinline preload="metadata"></audio>
@@ -21,7 +21,7 @@ main{max-width:560px;margin:auto;padding:26px 18px 60px}.page-header{display:fle
 <div class="actions"><a id="originalDownload" class="btn" download="original.wav">元音声を保存</a><a id="reverseDownload" class="btn" download="reversed.wav">逆再生を保存</a></div>
 </div>
 <div id="report" class="section hide">
-<label>音素AIの聞き取り</label><div id="asrText" class="result">解析中…</div><div id="phonemes" class="candidate hide"></div>
+<label>音素AIの聞き取り</label><div id="asrText" class="result">解析中…</div><div id="phonemes" class="candidate hide"></div><div id="phonemeCandidates" class="candidate hide"></div>
 <div class="actions"><button id="copyAi" class="outline" type="button" disabled>聞き取りをコピー</button><button id="runAsr" class="quiet" type="button">音素AIで再認識</button></div>
 <div class="actions"><button id="variants" class="quiet" type="button">Whisperでも聞き取る</button></div><div id="alternatives" class="candidate hide"></div>
 <div class="space"><label for="human">実際に聞こえた言葉</label><input id="human" type="text" placeholder="例：うしあ" spellcheck="false" autocomplete="off"></div>
@@ -44,7 +44,7 @@ function context(){return ctx??(ctx=new (window.AudioContext||window.webkitAudio
 function audioUrl(id,download,blob,old,name){if(old)URL.revokeObjectURL(old);const url=URL.createObjectURL(blob);$(id).src=url;$(download).href=url;$(download).download=name;return url}
 function reverseAudio(buffer){const b=context().createBuffer(buffer.numberOfChannels,buffer.length,buffer.sampleRate);for(let c=0;c<buffer.numberOfChannels;c++){const a=buffer.getChannelData(c),o=b.getChannelData(c);for(let i=0;i<a.length;i++)o[i]=a[a.length-1-i]}return b}
 function wav(buffer){const n=buffer.length,c=buffer.numberOfChannels,r=buffer.sampleRate,ab=new ArrayBuffer(44+n*c*2),v=new DataView(ab);const txt=(p,s)=>{for(let i=0;i<s.length;i++)v.setUint8(p+i,s.charCodeAt(i))};txt(0,'RIFF');v.setUint32(4,36+n*c*2,true);txt(8,'WAVE');txt(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,c,true);v.setUint32(24,r,true);v.setUint32(28,r*c*2,true);v.setUint16(32,c*2,true);v.setUint16(34,16,true);txt(36,'data');v.setUint32(40,n*c*2,true);let p=44;const channels=Array.from({length:c},(_,i)=>buffer.getChannelData(i));for(let i=0;i<n;i++)for(let j=0;j<c;j++){const s=Math.max(-1,Math.min(1,channels[j][i]));v.setInt16(p,s<0?s*32768:s*32767,true);p+=2}return new Blob([ab],{type:'audio/wav'})}
-async function acceptAudio(data,uploaded=false){const b=await context().decodeAudioData(data.slice(0));if(!b.length)throw Error('音声データが空です');sourceBuffer=b;reverseBuffer=(uploaded&&$('alreadyReversed').checked)?b:reverseAudio(b);const name=($('word').value.trim()||'audio').replace(/[\\/:*?"<>|\s]/g,'_').slice(0,25);sourceUrl=audioUrl('originalAudio','originalDownload',wav(b),sourceUrl,name+'_original.wav');reverseUrl=audioUrl('reverseAudio','reverseDownload',wav(reverseBuffer),reverseUrl,name+'_reversed.wav');$('media').classList.remove('hide');$('report').classList.remove('hide');$('asrText').textContent='解析中…';$('human').value='';aiResult='';$('copyAi').disabled=true;$('alternatives').classList.add('hide');$('alternatives').textContent='';$('phonemes').classList.add('hide');$('phonemes').textContent=''}
+async function acceptAudio(data,uploaded=false){const b=await context().decodeAudioData(data.slice(0));if(!b.length)throw Error('音声データが空です');sourceBuffer=b;reverseBuffer=(uploaded&&$('alreadyReversed').checked)?b:reverseAudio(b);const name=($('word').value.trim()||'audio').replace(/[\\/:*?"<>|\s]/g,'_').slice(0,25);sourceUrl=audioUrl('originalAudio','originalDownload',wav(b),sourceUrl,name+'_original.wav');reverseUrl=audioUrl('reverseAudio','reverseDownload',wav(reverseBuffer),reverseUrl,name+'_reversed.wav');$('media').classList.remove('hide');$('report').classList.remove('hide');$('asrText').textContent='解析中…';$('human').value='';aiResult='';$('copyAi').disabled=true;$('alternatives').classList.add('hide');$('alternatives').textContent='';$('phonemes').classList.add('hide');$('phonemes').textContent='';$('phonemeCandidates').classList.add('hide');$('phonemeCandidates').textContent=''}
 function trusted(url){try{const u=new URL(url);return u.protocol==='https:'&&/^audio[0-9]+\.tts\.quest$/.test(u.hostname)}catch{return false}}
 async function synthesize(text,speaker){const u=new URL('https://api.tts.quest/v3/voicevox/synthesis');u.searchParams.set('text',text);u.searchParams.set('speaker',speaker);status('音声を生成中…');const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('音声生成に失敗しました（'+r.status+'）');const info=await r.json();if(!info.success)throw Error('音声生成が制限されています。時間をおいて再試行してください');if(!trusted(info.wavDownloadUrl)||!trusted(info.audioStatusUrl))throw Error('音声のURLを確認できませんでした');for(let i=0;i<65;i++){const s=await fetch(info.audioStatusUrl,{cache:'no-store'});if(s.ok){const j=await s.json();if(j.isAudioError)throw Error('音声生成に失敗しました');if(j.isAudioReady){const w=await fetch(info.wavDownloadUrl,{cache:'no-store'});if(!w.ok)throw Error('音声を取得できませんでした');return w.arrayBuffer()}}await sleep(2000)}throw Error('音声生成がタイムアウトしました')}
 function mono16(buffer){const rate=16000,n=Math.max(1,Math.round(buffer.duration*rate)),out=new Float32Array(n),src=Array.from({length:buffer.numberOfChannels},(_,i)=>buffer.getChannelData(i));for(let i=0;i<n;i++){const pos=i*buffer.sampleRate/rate,j=Math.min(buffer.length-1,Math.floor(pos)),k=Math.min(buffer.length-1,j+1),f=pos-j;let sum=0;for(const ch of src)sum+=ch[j]*(1-f)+ch[k]*f;out[i]=sum/src.length}return out}
@@ -99,6 +99,60 @@ function decodeCtc(logits,idToPhone){
   previous=best;
  }
  return phones.join(' ');
+}
+// CTC prefix beam search: 音素列を確定する前に、音響スコアの近い候補も探索する。
+// 「うしあ」等の特定語を埋め込まず、モデルの生のロジットだけで順位付けする。
+function logAdd(a,b){if(a===-Infinity)return b;if(b===-Infinity)return a;const m=Math.max(a,b);return m+Math.log1p(Math.exp(Math.min(a,b)-m))}
+function decodeCtcCandidates(logits,idToPhone,width=24,count=5){
+ const [batch,frames,classes]=logits.dims;
+ if(batch!==1||logits.dims.length!==3)throw Error('音素AIの出力形式が想定外です');
+ const data=logits.data,blank=0;
+ const vowels=new Set(['a','i','u','e','o']);
+ const vowelIds=idToPhone.flatMap((p,i)=>vowels.has(p)?[i]:[]);
+ let beams=[{ids:[],pb:0,pnb:-Infinity}];
+ const add=(map,ids)=>{const key=ids.join(',');let v=map.get(key);if(!v){v={ids,pb:-Infinity,pnb:-Infinity};map.set(key,v)}return v};
+ for(let t=0;t<frames;t++){
+  const offset=t*classes;let max=-Infinity;
+  for(let c=0;c<classes;c++)if(data[offset+c]>max)max=data[offset+c];
+  const top=[];
+  for(let c=0;c<classes;c++){
+   const value=data[offset+c];
+   if(top.length<8||value>top[top.length-1][1]){
+    let i=0;while(i<top.length&&top[i][1]>=value)i++;
+    top.splice(i,0,[c,value]);if(top.length>8)top.pop();
+   }
+  }
+  const candidateIds=new Set([blank,...top.map(x=>x[0]),...vowelIds]);
+  const next=new Map();
+  for(const beam of beams){
+   const total=logAdd(beam.pb,beam.pnb);
+   const stay=add(next,beam.ids);
+   stay.pb=logAdd(stay.pb,total+data[offset+blank]-max);
+   const last=beam.ids[beam.ids.length-1];
+   for(const id of candidateIds){
+    if(id===blank)continue;
+    const value=data[offset+id]-max;
+    if(id===last){
+     stay.pnb=logAdd(stay.pnb,beam.pnb+value);
+     const extend=add(next,[...beam.ids,id]);
+     extend.pnb=logAdd(extend.pnb,beam.pb+value);
+    }else{
+     const extend=add(next,[...beam.ids,id]);
+     extend.pnb=logAdd(extend.pnb,total+value);
+    }
+   }
+  }
+  beams=[...next.values()].sort((a,b)=>logAdd(b.pb,b.pnb)-logAdd(a.pb,a.pnb)).slice(0,width);
+ }
+ const result=[];const seen=new Set();
+ for(const beam of beams.sort((a,b)=>logAdd(b.pb,b.pnb)-logAdd(a.pb,a.pnb))){
+  const raw=beam.ids.map(i=>idToPhone[i]).filter(p=>p&&!['PAD','UNK','SOS','EOS','sil','pau'].includes(p)).join(' ');
+  const kana=phonesToKana(raw).kana;
+  if(!kana||seen.has(kana))continue;
+  seen.add(kana);result.push({raw,kana,score:logAdd(beam.pb,beam.pnb)});
+  if(result.length>=count)break;
+ }
+ return result;
 }
 // OpenJTalk音素を日本語の仮名に近似変換。音素が不明なら隠さずそのまま示す。
 const VOWELS={a:'あ',i:'い',u:'う',e:'え',o:'お'};
@@ -158,13 +212,20 @@ async function recognize(){
   const input=await recognizer.extractor(withSilence(mono16(reverseBuffer)));
   const output=await recognizer.model(input);
   const raw=decodeCtc(output.logits,recognizer.idToPhone);
+  const candidates=decodeCtcCandidates(output.logits,recognizer.idToPhone);
   output.logits.dispose?.();
   const decoded=phonesToKana(raw);
-  aiResult=decoded.kana;
+  // 主表示はビーム探索の最高スコア候補。従来の単純な最大値列も参考として残す。
+  aiResult=candidates[0]?.kana||decoded.kana;
   $('asrText').textContent=aiResult||'音素を認識できませんでした';
   $('copyAi').disabled=!aiResult;
   const box=$('phonemes');box.classList.remove('hide');
-  box.textContent='認識した音素：'+(raw||'（なし）')+(decoded.unknown.length?' / 未変換：'+decoded.unknown.join(' '):'');
+  box.textContent='単純認識の音素：'+(raw||'（なし）')+(decoded.unknown.length?' / 未変換：'+decoded.unknown.join(' '):'');
+  const other=$('phonemeCandidates');
+  if(candidates.length>1){
+   other.classList.remove('hide');
+   other.textContent='音響的に近い候補：'+candidates.slice(1).map(c=>c.kana).join(' ／ ');
+  }else{other.classList.add('hide');other.textContent=''}
   status('完了','success');
  }catch(e){$('asrText').textContent='音素認識に失敗しました';throw Error('音素AIの実行に失敗しました。'+(e?.message||String(e)))}
 }
