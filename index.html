@@ -66,7 +66,7 @@ details .field{margin-top:9px}
 </style>
 </head>
 <body><main>
-<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.2.7</span></div>
+<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.2.8</span></div>
 <div class="group"><label for="word">読み上げる言葉（「、」で複数指定）</label><input id="word" type="text" value="あめ、いす、アイス、うさぎ、おこる" maxlength="240" autocomplete="off" spellcheck="false" placeholder="例：あめ、いす、アイス"><div id="textReverse" class="transform" aria-live="polite"></div><button id="start" class="primary">まとめて実験する</button><div id="status" class="status" role="status" aria-live="polite"></div></div>
 <section id="multiReport" class="section hide" aria-label="単語別の解析結果"><div class="compact-label"><label>単語別の結果</label><button id="copyAllWords" class="quiet small-btn" type="button" disabled>まとめてコピー</button></div><div id="multiStatus" class="small"></div><div id="multiResults" class="multi-list"></div></section>
 <section id="report" class="section hide">
@@ -367,15 +367,25 @@ function signalVariants(signal){
  const preemphasis=new Float32Array(n);
  if(n)preemphasis[0]=signal[0];
  for(let i=1;i<n;i++)preemphasis[i]=Math.max(-1,Math.min(1,signal[i]-.92*signal[i-1]));
- const extraPad=new Float32Array(n+6400);extraPad.set(signal,3200);
+ // 語頭の余分な息・ノイズが音素に誤認識されるかを検証するため、
+ // 語頭を少し切った音声を別パターンとして試す。元音声は変更しない。
+ // 本来の語頭音まで削る可能性があるので、通常音声の結果も必ず残す。
+ const trimStart=ms=>{
+  const cut=Math.round(16000*ms/1000);
+  if(n-cut<Math.round(16000*.2))return signal;
+  const out=signal.slice(cut);
+  const fade=Math.min(160,Math.floor(out.length/8));
+  for(let i=0;i<fade;i++)out[i]*=i/fade;
+  return out;
+ };
  return [
   {name:'通常',audio:signal},
-  {name:'音量補正',audio:normalize(signal)},
+  {name:'語頭40ms除去',audio:trimStart(40)},
   {name:'0.9倍速',audio:resampleSpeed(.9)},
   {name:'1.1倍速',audio:resampleSpeed(1.1)},
   {name:'先頭強調',audio:boostStart},
   {name:'高域強調',audio:preemphasis},
-  {name:'前後の余白',audio:extraPad},
+  {name:'語頭80ms除去',audio:trimStart(80)},
  ];
 }
 function addBatchRow(item){
