@@ -60,17 +60,44 @@ details .field{margin-top:9px}
 .multi-item .word{font-weight:750;overflow-wrap:anywhere}.multi-item .expected{color:var(--muted);overflow-wrap:anywhere}.multi-item .heard{font-weight:750;font-size:15px;overflow-wrap:anywhere;text-align:right}
 .multi-item.selected{border-color:var(--blue);background:var(--pale)}.multi-item.failed .heard{color:#b52e39;font-size:11px}
 .multi-item:disabled{opacity:1;cursor:default}
+.speaker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:5px 0 6px}
+.speaker-choice{display:flex;align-items:center;gap:6px;margin:0;padding:7px 8px;border:1px solid var(--line);border-radius:8px;font-size:12px;font-weight:500;min-height:36px;cursor:pointer}
+.speaker-choice input{accent-color:var(--blue);width:16px;height:16px;flex-shrink:0;margin:0}
+.speaker-choice:has(input:checked){background:var(--pale);border-color:#b5c9ef}
+.speaker-choice:has(input:disabled){opacity:.65}
+.batch-controls{display:flex;align-items:center;gap:7px}
+.batch-controls .primary{flex:1;width:auto;margin-top:4px}
+.batch-controls .stop{margin-top:4px;flex:0 0 70px;min-height:43px}
+.multi-group{margin-top:8px}
+.multi-group-title{font-size:12px;font-weight:750;color:var(--ink);margin:7px 0 4px}
+.multi-item .word{font-size:11px}
+.multi-item .voice{font-weight:750;overflow-wrap:anywhere}
+#multiResults{gap:3px}
+#multiResults .multi-item{min-height:35px}
+#speakerCount{margin-top:4px}
+@media(max-width:360px){.speaker-choice{font-size:11px;padding:6px}.multi-item{padding:6px}}
 
 @media(min-width:500px){main{padding:20px 18px 30px}h1{font-size:22px}.batch-row{padding:9px 10px}}
 @media(max-width:360px){h1{font-size:17px}.batch-row{padding:6px 5px}.batch-row .name{font-size:10px}.batch-row .value{font-size:12px}button{font-size:11px}}
 </style>
 </head>
 <body><main>
-<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.2.8</span></div>
-<div class="group"><label for="word">読み上げる言葉（「、」で複数指定）</label><input id="word" type="text" value="あめ、いす、アイス、うさぎ、おこる" maxlength="240" autocomplete="off" spellcheck="false" placeholder="例：あめ、いす、アイス"><div id="textReverse" class="transform" aria-live="polite"></div><button id="start" class="primary">まとめて実験する</button><div id="status" class="status" role="status" aria-live="polite"></div></div>
+<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.2.9</span></div>
+<div class="group"><label for="word">読み上げる言葉（「、」で複数指定）</label><input id="word" type="text" value="あめ、いす、アイス、うさぎ、おこる" maxlength="240" autocomplete="off" spellcheck="false" placeholder="例：あめ、いす、アイス"><div id="textReverse" class="transform" aria-live="polite"></div>
+<div class="compact-label space"><label>VOICEVOXの話者（複数選択可）</label><span id="speakerCount" class="small"></span></div>
+<div id="speakerGrid" class="speaker-grid" role="group" aria-label="話者を選択">
+<label class="speaker-choice"><input type="checkbox" name="speakerChoice" value="3" checked>ずんだもん</label>
+<label class="speaker-choice"><input type="checkbox" name="speakerChoice" value="2" checked>四国めたん</label>
+<label class="speaker-choice"><input type="checkbox" name="speakerChoice" value="8">春日部つむぎ</label>
+<label class="speaker-choice"><input type="checkbox" name="speakerChoice" value="9">波音リツ</label>
+<label class="speaker-choice"><input type="checkbox" name="speakerChoice" value="13">青山龍星</label>
+</div>
+<div class="compact-label space"><label for="depth">解析方法</label></div>
+<select id="depth"><option value="quick" selected>通常のみ（話者比較向け・高速）</option><option value="full">7パターン（詳細・時間がかかる）</option></select>
+<div class="batch-controls"><button id="start" class="primary">まとめて実験する</button><button id="stop" class="quiet stop hide" type="button">中止</button></div><div id="status" class="status" role="status" aria-live="polite"></div></div>
 <section id="multiReport" class="section hide" aria-label="単語別の解析結果"><div class="compact-label"><label>単語別の結果</label><button id="copyAllWords" class="quiet small-btn" type="button" disabled>まとめてコピー</button></div><div id="multiStatus" class="small"></div><div id="multiResults" class="multi-list"></div></section>
 <section id="report" class="section hide">
-<div class="compact-label"><label id="currentWordLabel">AIの聞き取り（音声のみ）</label><span class="small">7パターン比較</span></div>
+<div class="compact-label"><label id="currentWordLabel">AIの聞き取り（音声のみ）</label><span id="currentModeLabel" class="small">7パターン比較</span></div>
 <div id="asrText" class="result">解析中…</div><div id="basis" class="candidate" aria-live="polite"></div>
 <div id="batchResults" class="batch-list" aria-live="polite"></div>
 <details class="advanced-details"><summary>認識の詳細を見る</summary><div id="phonemes" class="candidate hide"></div><div id="phonemeCandidates" class="candidate hide"></div><div id="onsetCandidates" class="candidate hide"></div></details>
@@ -84,16 +111,19 @@ details .field{margin-top:9px}
 <div class="actions"><a id="originalDownload" class="btn" download="original.wav">元音声を保存</a><a id="reverseDownload" class="btn" download="reversed.wav">逆再生を保存</a></div>
 </details>
 <details><summary>設定・音声ファイル読み込み</summary>
-<div class="field"><label for="speaker">VOICEVOXの話者</label><select id="speaker"><option value="3">ずんだもん</option><option value="0">四国めたん</option><option value="8">春日部つむぎ</option></select></div>
+
 <div class="field"><label for="model">Whisperのモデル（比較用）</label><select id="model"><option value="base">base（精度優先）</option><option value="tiny">tiny（軽量）</option></select></div>
 <div class="field"><label for="upload">音声ファイルを読み込む</label><input id="upload" type="file" accept="audio/*,.wav,.mp3,.m4a"><label class="small" style="font-weight:400;margin-top:8px"><input id="alreadyReversed" type="checkbox"> すでに逆再生済みのファイル</label></div>
 </details>
-<div class="footer"><a href="https://voicevox.hiroshiba.jp/" target="_blank" rel="noopener" id="credit">VOICEVOX：ずんだもん</a> · 音素AI / Whisper</div>
+<div class="footer"><a href="https://voicevox.hiroshiba.jp/" target="_blank" rel="noopener" id="credit">VOICEVOX：ずんだもん、四国めたん</a> · 音素AI / Whisper</div>
 </main>
 <script type="module">
 const $=id=>document.getElementById(id);
 let ctx,sourceBuffer,reverseBuffer,sourceUrl,reverseUrl,wordAtRun='',aiResult='',busy=false,transcriberCache=null,transcriberModel='',phonemeRecognizer=null,batchData=[],rawAiResult='';
 let wordResults=[],selectedWordIndex=-1,multiRunning=false,multiStop=false;
+function selectedSpeakers(){return [...document.querySelectorAll('input[name="speakerChoice"]:checked')].map(e=>({id:e.value,name:e.parentElement.textContent.trim()}))}
+function updateSpeakerCount(){const speakers=selectedSpeakers(),words=splitWords($('word').value);$('speakerCount').textContent=speakers.length+'話者';$('start').textContent='まとめて実験する（'+(words.length*speakers.length)+'件）';$('credit').textContent='VOICEVOX：'+(speakers.length?speakers.map(x=>x.name).join('、'):'ずんだもん')}
+function lockInputs(lock){for(const e of document.querySelectorAll('input[name="speakerChoice"]'))e.disabled=lock;$('word').disabled=lock;$('depth').disabled=lock}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 // 文字列から計算する参考値。AIの聞き取り結果とは独立させる。
 const KANA_ROMAJI={
@@ -167,8 +197,9 @@ function showTextReference(){
   $('textReverse').textContent=words.length+'語：'+words.slice(0,3).map(w=>w+' → '+(reverseTextReference(w)?.kana||'変換不可')).join(' ／ ')+(words.length>3?' ほか':'');
  }
 }
-$('word').addEventListener('input',showTextReference);
-showTextReference();
+$('word').addEventListener('input',()=>{showTextReference();updateSpeakerCount()});
+for(const e of document.querySelectorAll('input[name="speakerChoice"]'))e.addEventListener('change',updateSpeakerCount);
+showTextReference();updateSpeakerCount();
 
 function status(msg,kind=''){$('status').textContent=msg;$('status').className='status '+kind}
 function setBusy(v){busy=v;for(const id of ['start','runAsr','variants'])$(id).disabled=v;if(v)$('copyBatch').disabled=true;else $('copyBatch').disabled=!batchData.length}
@@ -367,25 +398,38 @@ function signalVariants(signal){
  const preemphasis=new Float32Array(n);
  if(n)preemphasis[0]=signal[0];
  for(let i=1;i<n;i++)preemphasis[i]=Math.max(-1,Math.min(1,signal[i]-.92*signal[i-1]));
- // 語頭の余分な息・ノイズが音素に誤認識されるかを検証するため、
- // 語頭を少し切った音声を別パターンとして試す。元音声は変更しない。
- // 本来の語頭音まで削る可能性があるので、通常音声の結果も必ず残す。
- const trimStart=ms=>{
-  const cut=Math.round(16000*ms/1000);
-  if(n-cut<Math.round(16000*.2))return signal;
-  const out=signal.slice(cut);
-  const fade=Math.min(160,Math.floor(out.length/8));
-  for(let i=0;i<fade;i++)out[i]*=i/fade;
+ // 語頭を切る実験は5語で有効性が低かったため、音を削らず周波数を調整する。
+ // IIRの前後方向処理で位相のずれを抑え、音量差はRMSで補正する。
+ const filtered=(type,cutoff)=>{
+  const dt=1/16000,rc=1/(2*Math.PI*cutoff);
+  const alpha=type==='high'?rc/(rc+dt):dt/(rc+dt);
+  const pass=(src)=>{
+   const out=new Float32Array(src.length);
+   if(!src.length)return out;
+   let y=type==='high'?0:src[0],prev=src[0];
+   for(let i=0;i<src.length;i++){
+    const x=src[i];
+    y=type==='high'?alpha*(y+x-prev):y+alpha*(x-y);
+    out[i]=y;prev=x;
+   }
+   return out;
+  };
+  const reversed=x=>Float32Array.from(x).reverse();
+  const out=reversed(pass(reversed(pass(signal))));
+  let inEnergy=0,outEnergy=0;
+  for(let i=0;i<n;i++){inEnergy+=signal[i]*signal[i];outEnergy+=out[i]*out[i]}
+  const gain=outEnergy>1e-12?Math.min(2,Math.sqrt(inEnergy/outEnergy)):1;
+  for(let i=0;i<n;i++)out[i]=Math.max(-1,Math.min(1,out[i]*gain));
   return out;
  };
  return [
   {name:'通常',audio:signal},
-  {name:'語頭40ms除去',audio:trimStart(40)},
+  {name:'低域除去120Hz',audio:filtered('high',120)},
   {name:'0.9倍速',audio:resampleSpeed(.9)},
   {name:'1.1倍速',audio:resampleSpeed(1.1)},
   {name:'先頭強調',audio:boostStart},
   {name:'高域強調',audio:preemphasis},
-  {name:'語頭80ms除去',audio:trimStart(80)},
+  {name:'高域除去2.6kHz',audio:filtered('low',2600)},
  ];
 }
 function addBatchRow(item){
@@ -475,7 +519,7 @@ function estimateAudioOnly(consensus,acoustic,baseline){
  }
  return {kana:base,reason:'音素AIの多数決',alternative:''};
 }
-async function recognize(){
+async function recognize(quick=false){
  if(!reverseBuffer)throw Error('先に音声を作成してください');
  $('asrText').textContent='解析中…';$('copyAi').disabled=true;$('copyBatch').disabled=true;
  $('batchResults').replaceChildren();batchData=[];aiResult='';rawAiResult='';$('basis').textContent='';
@@ -483,7 +527,7 @@ async function recognize(){
  $('phonemes').classList.add('hide');$('phonemeCandidates').classList.add('hide');$('onsetCandidates').classList.add('hide');
  const recognizer=await getPhonemeRecognizer();
  const trimmed=trimQuiet(mono16(reverseBuffer));
- const variants=signalVariants(trimmed);
+ const variants=quick?signalVariants(trimmed).slice(0,1):signalVariants(trimmed);
  let baseline=null;
  for(let i=0;i<variants.length;i++){
   const v=variants[i];status('音素AIで一括解析中… '+(i+1)+' / '+variants.length+'：'+v.name);
@@ -600,9 +644,9 @@ async function tryVariants(){
 }
 async function copyText(text){if(!text)return false;try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);return true}}catch{}const input=document.createElement('textarea');input.value=text;input.setAttribute('readonly','');input.style.cssText='position:fixed;left:-9999px;top:0';document.body.appendChild(input);input.focus();input.select();input.setSelectionRange(0,input.value.length);let ok=false;try{ok=document.execCommand('copy')}catch{}input.remove();return ok}
 // 単語ごとに音声生成・7パターン解析を行い、個別の結果を保持する。
-function captureWordResult(word){
+function captureWordResult(word,speaker,depth){
  return {
-  word,reference:reverseTextReference(word)?.kana||'変換不可',ai:aiResult,raw:rawAiResult,
+  word,speakerId:speaker.id,speakerName:speaker.name,depth,reference:reverseTextReference(word)?.kana||'変換不可',ai:aiResult,raw:rawAiResult,
   basis:$('basis').textContent,details:batchData.map(x=>({...x})),
   phonemes:$('phonemes').textContent,phonemeCandidates:$('phonemeCandidates').textContent,
   onsetCandidates:$('onsetCandidates').textContent,alternative:$('alternatives').textContent,
@@ -610,15 +654,16 @@ function captureWordResult(word){
  };
 }
 function renderWordResults(){
- const list=$('multiResults');list.replaceChildren();
+ const list=$('multiResults');list.replaceChildren();let lastWord='';
  wordResults.forEach((r,i)=>{
+  if(r.word!==lastWord){const group=document.createElement('div');group.className='multi-group-title';group.textContent=r.word;list.append(group);lastWord=r.word}
   const b=document.createElement('button');b.type='button';
   b.className='multi-item'+(i===selectedWordIndex?' selected':'')+(r.error?' failed':'');
   b.disabled=multiRunning;
-  const word=document.createElement('span');word.className='word';word.textContent=r.word;
+  const voice=document.createElement('span');voice.className='voice';voice.textContent=r.speakerName||'音声ファイル';
   const ref=document.createElement('span');ref.className='expected';ref.textContent='予測：'+r.reference;
   const ai=document.createElement('span');ai.className='heard';ai.textContent=r.error?'失敗':(r.ai||'認識なし');
-  b.append(word,ref,ai);
+  b.append(voice,ref,ai);
   b.addEventListener('click',()=>showWordResult(i));list.append(b);
  });
  $('multiReport').classList.toggle('hide',wordResults.length===0);
@@ -631,7 +676,7 @@ function showWordResult(index){
   wordResults[selectedWordIndex].human=$('human').value;
  }
  selectedWordIndex=index;wordAtRun=r.word;
- $('currentWordLabel').textContent=r.word+'：AIの聞き取り（音声のみ）';
+ $('currentWordLabel').textContent=r.word+' ／ '+(r.speakerName||'音声ファイル')+'：AIの聞き取り';$('currentModeLabel').textContent=r.depth==='quick'?'通常のみ':'7パターン比較';
  if(r.error){$('report').classList.add('hide');$('media').classList.add('hide');status(r.word+'：'+r.error,'error');renderWordResults();return}
  sourceBuffer=r.source;reverseBuffer=r.reversed;aiResult=r.ai;rawAiResult=r.raw;
  batchData=r.details.map(x=>({...x}));
@@ -644,7 +689,7 @@ function showWordResult(index){
  $('alternatives').textContent=r.alternative||'';$('alternatives').classList.toggle('hide',!r.alternative);
  $('human').value=r.human||'';
  $('copyAi').disabled=!aiResult;$('copyBatch').disabled=!batchData.length;
- const name=r.word.replace(/[\\/:*?"<>|\s]/g,'_').slice(0,25);
+ const name=(r.word+'_'+(r.speakerName||'')).replace(/[\\/:*?"<>|\s]/g,'_').slice(0,25);
  sourceUrl=audioUrl('originalAudio','originalDownload',wav(sourceBuffer),sourceUrl,name+'_original.wav');
  reverseUrl=audioUrl('reverseAudio','reverseDownload',wav(reverseBuffer),reverseUrl,name+'_reversed.wav');
  status(r.word+'の結果を表示中','success');renderWordResults();
@@ -652,7 +697,7 @@ function showWordResult(index){
 function allWordsText(){
  if(selectedWordIndex>=0&&wordResults[selectedWordIndex]&&!wordResults[selectedWordIndex].error){wordResults[selectedWordIndex].human=$('human').value}
  return wordResults.map((r,i)=>[
-  '【'+(i+1)+'】'+r.word,
+  '【'+(i+1)+'】'+r.word+' ／ '+(r.speakerName||'音声ファイル'),
   '文字からの逆読み（参考）：'+r.reference,
   ...(r.error?['エラー：'+r.error]:[
    ...r.details.map(x=>x.name+'：'+(x.error?'失敗 '+x.error:(x.kana||'認識なし'))),
@@ -668,39 +713,48 @@ $('human').addEventListener('input',()=>{
 $('copyAllWords').addEventListener('click',async()=>{
  const ok=await copyText(allWordsText());status(ok?'全単語の結果をコピーしました':'コピーできませんでした',ok?'success':'error');
 });
+$('stop').addEventListener('click',()=>{multiStop=true;$('stop').disabled=true;status('現在の解析が終わったら中止します')});
 $('start').addEventListener('click',async()=>{
  if(busy)return;
- const words=splitWords($('word').value);
+ const words=splitWords($('word').value),speakers=selectedSpeakers(),depth=$('depth').value;
  if(!words.length){status('言葉を入力してください','error');return}
  if(words.length>10){status('一度に検証できるのは10語までです','error');return}
- setBusy(true);multiRunning=true;multiStop=false;wordResults=[];selectedWordIndex=-1;
+ if(!speakers.length){status('話者を1人以上選択してください','error');return}
+ const total=words.length*speakers.length;
+ setBusy(true);lockInputs(true);multiRunning=true;multiStop=false;wordResults=[];selectedWordIndex=-1;
+ $('stop').classList.remove('hide');$('stop').disabled=false;
  $('multiReport').classList.remove('hide');$('multiResults').replaceChildren();
  $('copyAllWords').disabled=true;$('report').classList.add('hide');$('media').classList.add('hide');
- $('multiStatus').textContent='0 / '+words.length+'語';
+ $('multiStatus').textContent='0 / '+total+'件';
  try{
-  for(let i=0;i<words.length;i++){
-   const word=words[i];wordAtRun=word;
-   $('multiStatus').textContent=(i+1)+' / '+words.length+'語を解析中：'+word;
-   try{
-    const a=await synthesize(word,$('speaker').value);
-    await acceptAudio(a,false,word);
-    $('credit').textContent='VOICEVOX：'+$('speaker').selectedOptions[0].textContent;
-    await recognize();
-    wordResults.push(captureWordResult(word));
-   }catch(e){
-    wordResults.push({word,reference:reverseTextReference(word)?.kana||'変換不可',error:e?.message||String(e)});
+  for(const word of words){
+   for(const speaker of speakers){
+    if(multiStop)break;
+    wordAtRun=word;
+    const current=wordResults.length+1;
+    $('multiStatus').textContent=current+' / '+total+'件を解析中：'+word+' ／ '+speaker.name;
+    try{
+     const a=await synthesize(word,speaker.id);
+     await acceptAudio(a,false,word+'_'+speaker.name);
+     await recognize(depth==='quick');
+     wordResults.push(captureWordResult(word,speaker,depth));
+    }catch(e){
+     wordResults.push({word,speakerId:speaker.id,speakerName:speaker.name,depth,reference:reverseTextReference(word)?.kana||'変換不可',error:e?.message||String(e)});
+    }
+    renderWordResults();
+    await new Promise(resolve=>requestAnimationFrame(resolve));
    }
-   renderWordResults();
-   await new Promise(resolve=>requestAnimationFrame(resolve));
+   if(multiStop)break;
   }
  }finally{
-  multiRunning=false;setBusy(false);
+  multiRunning=false;setBusy(false);lockInputs(false);
+  $('stop').classList.add('hide');$('stop').disabled=false;updateSpeakerCount();
   const success=wordResults.filter(r=>!r.error).length;
-  $('multiStatus').textContent=words.length+'語中 '+success+'語の解析完了'+(success<words.length?'（'+(words.length-success)+'語失敗）':'');
+  $('multiStatus').textContent=(multiStop?'途中で中止：':'')+wordResults.length+'件中 '+success+'件の解析完了'+(success<wordResults.length?'（'+(wordResults.length-success)+'件失敗）':'');
   $('copyAllWords').disabled=!wordResults.length;
   const first=wordResults.findIndex(r=>!r.error);
   if(first>=0)showWordResult(first);
-  else{$('report').classList.add('hide');$('media').classList.add('hide');status('すべての単語の解析に失敗しました','error')}
+  else{$('report').classList.add('hide');$('media').classList.add('hide');status('解析できた結果がありません','error')}
   renderWordResults();
  }
 });
