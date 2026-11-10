@@ -105,10 +105,10 @@ details .field{margin-top:9px}
 </style>
 </head>
 <body><main>
-<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.3.4</span></div>
+<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.3.5</span></div>
 <div class="group"><label for="word">読み上げる言葉（「、」で複数指定）</label><input id="word" type="text" value="" maxlength="240" autocomplete="off" spellcheck="false" placeholder="例：あめ、いす、アイス"><div id="textReverse" class="transform" aria-live="polite"></div>
 <div class="random-controls"><label class="auto-choice"><input type="checkbox" id="autoWords" checked> 毎回10語を自動で選ぶ</label><button id="shuffleWords" class="quiet small-btn" type="button">10語を入れ替え</button></div>
-<div class="small" id="randomInfo">音の種類が偏らないよう10語を選びます。手入力もできます。</div>
+<div class="small" id="randomInfo">音の種類が偏らないよう10語を選びます。手入力もできます。7条件の解析内容は変えず、音声生成を先読みして待ち時間を短縮します。</div>
 <div class="compact-label space"><label>VOICEVOXの話者（複数選択可）</label><span id="speakerCount" class="small"></span></div>
 <div id="speakerGrid" class="speaker-grid" role="group" aria-label="話者を選択">
 <label class="speaker-choice"><input type="checkbox" name="speakerChoice" value="3" checked>ずんだもん</label>
@@ -157,6 +157,7 @@ details .field{margin-top:9px}
 const $=id=>document.getElementById(id);
 let ctx,sourceBuffer,reverseBuffer,sourceUrl,reverseUrl,wordAtRun='',aiResult='',busy=false,transcriberCache=null,transcriberModel='',phonemeRecognizer=null,batchData=[],rawAiResult='';
 let wordResults=[],selectedWordIndex=-1,multiRunning=false,multiStop=false;
+let phonemeRecognizerPromise=null,currentAudioMetrics=null;
 // 10種類の音韻グループから各1語。単語そのものの逆読みを正解としてAIへ渡さない。
 // この候補は端末内でのみ使い、選択履歴もページを閉じると消える。
 const WORD_POOLS=[
@@ -334,7 +335,7 @@ function audioUrl(id,download,blob,old,name){if(old)URL.revokeObjectURL(old);con
 function reverseAudio(buffer){const b=context().createBuffer(buffer.numberOfChannels,buffer.length,buffer.sampleRate);for(let c=0;c<buffer.numberOfChannels;c++){const a=buffer.getChannelData(c),o=b.getChannelData(c);for(let i=0;i<a.length;i++)o[i]=a[a.length-1-i]}return b}
 function wav(buffer){const n=buffer.length,c=buffer.numberOfChannels,r=buffer.sampleRate,ab=new ArrayBuffer(44+n*c*2),v=new DataView(ab);const txt=(p,s)=>{for(let i=0;i<s.length;i++)v.setUint8(p+i,s.charCodeAt(i))};txt(0,'RIFF');v.setUint32(4,36+n*c*2,true);txt(8,'WAVE');txt(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,c,true);v.setUint32(24,r,true);v.setUint32(28,r*c*2,true);v.setUint16(32,c*2,true);v.setUint16(34,16,true);txt(36,'data');v.setUint32(40,n*c*2,true);let p=44;const channels=Array.from({length:c},(_,i)=>buffer.getChannelData(i));for(let i=0;i<n;i++)for(let j=0;j<c;j++){const s=Math.max(-1,Math.min(1,channels[j][i]));v.setInt16(p,s<0?s*32768:s*32767,true);p+=2}return new Blob([ab],{type:'audio/wav'})}
 async function acceptAudio(data,uploaded=false,nameWord=null){const b=await context().decodeAudioData(data.slice(0));return acceptDecodedAudio(b,uploaded,nameWord)}
-async function acceptDecodedAudio(b,uploaded=false,nameWord=null){if(!b.length)throw Error('音声データが空です');sourceBuffer=b;reverseBuffer=(uploaded&&$('alreadyReversed').checked)?b:reverseAudio(b);const name=(nameWord||wordAtRun||'audio').replace(/[\\/:*?"<>|\s]/g,'_').slice(0,25);sourceUrl=audioUrl('originalAudio','originalDownload',wav(b),sourceUrl,name+'_original.wav');reverseUrl=audioUrl('reverseAudio','reverseDownload',wav(reverseBuffer),reverseUrl,name+'_reversed.wav');$('media').classList.remove('hide');$('report').classList.remove('hide');$('asrText').textContent='解析中…';$('human').value='';$('comparison').replaceChildren();$('vowelNote').classList.add('hide');$('vowelNote').textContent='';$('durationNote').classList.add('hide');$('durationNote').textContent='';aiResult='';rawAiResult='';$('basis').textContent='';$('copyAi').disabled=true;$('alternatives').classList.add('hide');$('alternatives').textContent='';$('phonemes').classList.add('hide');$('phonemes').textContent='';$('phonemeCandidates').classList.add('hide');$('phonemeCandidates').textContent='';$('onsetCandidates').classList.add('hide');$('onsetCandidates').textContent='';$('batchResults').replaceChildren();batchData=[];$('copyBatch').disabled=true}
+async function acceptDecodedAudio(b,uploaded=false,nameWord=null,batchMode=false){if(!b.length)throw Error('音声データが空です');sourceBuffer=b;reverseBuffer=(uploaded&&$('alreadyReversed').checked)?b:reverseAudio(b);currentAudioMetrics=null;if(!batchMode){const name=(nameWord||wordAtRun||'audio').replace(/[\\/:*?"<>|\s]/g,'_').slice(0,25);sourceUrl=audioUrl('originalAudio','originalDownload',wav(b),sourceUrl,name+'_original.wav');reverseUrl=audioUrl('reverseAudio','reverseDownload',wav(reverseBuffer),reverseUrl,name+'_reversed.wav');$('media').classList.remove('hide')}$('report').classList.remove('hide');$('asrText').textContent='解析中…';$('human').value='';$('comparison').replaceChildren();$('vowelNote').classList.add('hide');$('vowelNote').textContent='';$('durationNote').classList.add('hide');$('durationNote').textContent='';aiResult='';rawAiResult='';$('basis').textContent='';$('copyAi').disabled=true;$('alternatives').classList.add('hide');$('alternatives').textContent='';$('phonemes').classList.add('hide');$('phonemes').textContent='';$('phonemeCandidates').classList.add('hide');$('phonemeCandidates').textContent='';$('onsetCandidates').classList.add('hide');$('onsetCandidates').textContent='';$('batchResults').replaceChildren();batchData=[];$('copyBatch').disabled=true}
 function trusted(url){try{const u=new URL(url);return u.protocol==='https:'&&/^audio[0-9]+\.tts\.quest$/.test(u.hostname)}catch{return false}}
 // ひらがな・カタカナだけの単語は、表記差でTTSの読みや抑揚が変わらないよう統一する。
 // 「あいす」と「アイス」は同じ合成リクエストになる。漢字や文章は変更しない。
@@ -344,7 +345,7 @@ function normalizeSpeechText(text){
   ? value.replace(/[ぁ-ゖ]/g,c=>String.fromCharCode(c.charCodeAt(0)+96))
   : value;
 }
-async function synthesize(text,speaker){const speechText=normalizeSpeechText(text);const u=new URL('https://api.tts.quest/v3/voicevox/synthesis');u.searchParams.set('text',speechText);u.searchParams.set('speaker',speaker);status('音声を生成中…');const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('音声生成に失敗しました（'+r.status+'）');const info=await r.json();if(!info.success)throw Error('音声生成が制限されています。時間をおいて再試行してください');if(!trusted(info.wavDownloadUrl)||!trusted(info.audioStatusUrl))throw Error('音声のURLを確認できませんでした');for(let i=0;i<65;i++){const s=await fetch(info.audioStatusUrl,{cache:'no-store'});if(s.ok){const j=await s.json();if(j.isAudioError)throw Error('音声生成に失敗しました');if(j.isAudioReady){const w=await fetch(info.wavDownloadUrl,{cache:'no-store'});if(!w.ok)throw Error('音声を取得できませんでした');return w.arrayBuffer()}}await sleep(2000)}throw Error('音声生成がタイムアウトしました')}
+async function synthesize(text,speaker){const speechText=normalizeSpeechText(text);const u=new URL('https://api.tts.quest/v3/voicevox/synthesis');u.searchParams.set('text',speechText);u.searchParams.set('speaker',speaker);if(!multiRunning)status('音声を生成中…');const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('音声生成に失敗しました（'+r.status+'）');const info=await r.json();if(!info.success)throw Error('音声生成が制限されています。時間をおいて再試行してください');if(!trusted(info.wavDownloadUrl)||!trusted(info.audioStatusUrl))throw Error('音声のURLを確認できませんでした');for(let i=0;i<130;i++){const s=await fetch(info.audioStatusUrl,{cache:'no-store'});if(s.ok){const j=await s.json();if(j.isAudioError)throw Error('音声生成に失敗しました');if(j.isAudioReady){const w=await fetch(info.wavDownloadUrl,{cache:'no-store'});if(!w.ok)throw Error('音声を取得できませんでした');return w.arrayBuffer()}}await sleep(1000)}throw Error('音声生成がタイムアウトしました')}
 function mono16(buffer){const rate=16000,n=Math.max(1,Math.round(buffer.duration*rate)),out=new Float32Array(n),src=Array.from({length:buffer.numberOfChannels},(_,i)=>buffer.getChannelData(i));for(let i=0;i<n;i++){const pos=i*buffer.sampleRate/rate,j=Math.min(buffer.length-1,Math.floor(pos)),k=Math.min(buffer.length-1,j+1),f=pos-j;let sum=0;for(const ch of src)sum+=ch[j]*(1-f)+ch[k]*f;out[i]=sum/src.length}return out}
 function normalize(x){let max=0;for(const v of x)max=Math.max(max,Math.abs(v));const gain=max>0?Math.min(2.8,.88/max):1;const out=new Float32Array(x.length);for(let i=0;i<x.length;i++)out[i]=x[i]*gain;return out}
 function tidy(text){return (text||'').trim().replace(/^[\s、。，．!！?？「」『』]+|[\s、。，．!！?？「」『』]+$/g,'')}
@@ -359,7 +360,7 @@ async function getTranscriber(){
 }
 // HuBERT音素認識モデルは tokenizer.json がないため pipeline() を使わず直接読み込む。
 // 出力は CTC ロジット。別途 vocab.json で音素IDへ戻す。
-async function getPhonemeRecognizer(){
+async function loadPhonemeRecognizer(){
  if(phonemeRecognizer)return phonemeRecognizer;
  status('音素AIを準備中…（初回は約63MB）');
  const {AutoFeatureExtractor,AutoModelForCTC,env}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
@@ -378,6 +379,14 @@ async function getPhonemeRecognizer(){
  for(const [phone,id] of Object.entries(vocab))idToPhone[Number(id)]=phone;
  phonemeRecognizer={extractor,model,idToPhone};
  return phonemeRecognizer;
+}
+// モデル初期化は同時に複数回走らせない。合成音声の先読み中に一度だけ準備する。
+async function getPhonemeRecognizer(){
+ if(phonemeRecognizer)return phonemeRecognizer;
+ if(!phonemeRecognizerPromise){
+  phonemeRecognizerPromise=loadPhonemeRecognizer().catch(error=>{phonemeRecognizerPromise=null;throw error});
+ }
+ return phonemeRecognizerPromise;
 }
 function decodeCtc(logits,idToPhone){
  const dims=logits.dims;
@@ -657,8 +666,7 @@ async function recognize(quick=false){
  const variants=quick?signalVariants(trimmed).slice(0,1):signalVariants(trimmed);
  let baseline=null;
  for(let i=0;i<variants.length;i++){
-  const v=variants[i];status('音素AIで一括解析中… '+(i+1)+' / '+variants.length+'：'+v.name);
-  await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+  const v=variants[i];if(!multiRunning){status('音素AIで一括解析中… '+(i+1)+' / '+variants.length+'：'+v.name);await new Promise(resolve=>requestAnimationFrame(resolve));}
   let output;
   try{
    const input=await recognizer.extractor(withSilence(v.audio));
@@ -673,8 +681,8 @@ async function recognize(quick=false){
     kana=candidates[0]?.kana||greedy;
     baseline={raw,kana,candidates,source:v.name};
    }
-   const item={name:v.name,kana,raw};batchData.push(item);addBatchRow(item);
-  }catch(e){const item={name:v.name,error:e?.message||String(e)};batchData.push(item);addBatchRow(item)}
+   const item={name:v.name,kana,raw};batchData.push(item);if(!multiRunning)addBatchRow(item);
+  }catch(e){const item={name:v.name,error:e?.message||String(e)};batchData.push(item);if(!multiRunning)addBatchRow(item)}
   finally{try{output?.logits?.dispose?.()}catch{}}
  }
  if(!baseline){$('asrText').textContent='認識できませんでした';$('copyBatch').disabled=false;throw Error('すべてのパターンで音素認識に失敗しました')}
@@ -684,18 +692,18 @@ async function recognize(quick=false){
  rawAiResult=baseline.kana;
  aiResult=estimate.kana;
  $('asrText').textContent=aiResult||'認識できませんでした';
- setVowelNote(aiResult,wordAtRun,$('human').value);setDurationNote(audioDurationMetrics(reverseBuffer));updateHumanMatch();
+ currentAudioMetrics=audioDurationMetrics(reverseBuffer);if(!multiRunning){setVowelNote(aiResult,wordAtRun,$('human').value);setDurationNote(currentAudioMetrics);updateHumanMatch();}
  $('basis').textContent='音素AI単独：'+rawAiResult+' ／ '+consensus.method+'：'+consensus.kana+' ／ 先頭母音：'+acoustic.decision+(estimate.alternative?' ／ 別候補：'+estimate.alternative:'');
  $('copyAi').disabled=!aiResult;$('copyBatch').disabled=false;
  const summary={name:'先頭母音の音響推定',kana:acoustic.decision,raw:Number.isFinite(acoustic.f1)?'F1 '+acoustic.f1+'Hz / F2 '+acoustic.f2+'Hz':(acoustic.reason||'')};
- batchData.push(summary);addBatchRow(summary);
+ batchData.push(summary);if(!multiRunning)addBatchRow(summary);
  const info=$('phonemes');info.classList.remove('hide');info.textContent='音声のみの推定根拠：'+estimate.reason+' ／ 基準：'+baseline.source+' ／ 音素：'+baseline.raw;
  const other=$('phonemeCandidates');
  const extras=[];
  if(estimate.alternative)extras.push('音響的な別候補：'+estimate.alternative+'（未確定）');
  if(baseline.candidates.length>1)extras.push('CTC別候補：'+baseline.candidates.slice(1).map(x=>x.kana).join(' ／ '));
  if(extras.length){other.classList.remove('hide');other.textContent=extras.join(' ／ ')}
- status('全'+variants.length+'パターンの解析が完了しました','success');
+ if(!multiRunning)status('全'+variants.length+'パターンの解析が完了しました','success');
 }
 // 音素モデルとは独立した母音の音響解析（LPCスペクトル包絡）。
 // 日本語の「う」「お」は個人差・逆再生による変化が大きいため、参考候補として示す。
@@ -862,7 +870,7 @@ function captureWordResult(word,speaker,depth,preset,ttsText){
   basis:$('basis').textContent,details:batchData.map(x=>({...x})),
   phonemes:$('phonemes').textContent,phonemeCandidates:$('phonemeCandidates').textContent,
   onsetCandidates:$('onsetCandidates').textContent,alternative:$('alternatives').textContent,
-  source:sourceBuffer,reversed:reverseBuffer,human:'',vowelNote:vowelRepeatAnalysis(aiResult,word),audioMetrics:audioDurationMetrics(reverseBuffer)
+  source:sourceBuffer,reversed:reverseBuffer,human:'',vowelNote:vowelRepeatAnalysis(aiResult,word),audioMetrics:currentAudioMetrics||audioDurationMetrics(reverseBuffer)
  };
 }
 // 単語・発音条件ごとに話者間の一致を集計する。文字予測は一切投票に使わない。
@@ -1002,45 +1010,76 @@ $('start').addEventListener('click',async()=>{
  $('multiReport').classList.remove('hide');$('multiResults').replaceChildren();
  $('copyAllWords').disabled=true;$('report').classList.add('hide');$('media').classList.add('hide');
  $('multiStatus').textContent='0 / '+total+'件';
+ const startedAt=performance.now();
  try{
-  // 同じ合成表記・話者の音声は一度だけ生成し、速度違いには再利用する。
-  const synthesisCache=new Map();
-  for(const word of words){
-   for(const speaker of speakers){
-    if(multiStop)break;
-    for(const preset of presets){
-     if(multiStop)break;
-     wordAtRun=word;
-     const ttsText=synthesisTextForPreset(word,preset.id);
-     const current=wordResults.length+1;
-     $('multiStatus').textContent=current+' / '+total+'件を解析中：'+word+' ／ '+speaker.name+' ／ '+preset.name;
+  // 音声合成を最大2件並列で先読みし、音素AIの7条件解析と通信待ちを重ねる。
+  // 解析条件・音素モデル・CTC候補探索・推定ルールは従来と完全に同じ。
+  const jobs=words.flatMap(word=>speakers.flatMap(speaker=>presets.map(preset=>({
+   word,speaker,preset,ttsText:synthesisTextForPreset(word,preset.id)
+  }))));
+  const synthesisCache=new Map(),synthesisPending=new Map(),synthesisQueue=[];
+  let activeSynth=0;
+  const pumpSynthesis=()=>{
+   while(activeSynth<2&&synthesisQueue.length){
+    const job=synthesisQueue.shift();
+    if(multiStop){job.resolve({error:Error('中止しました')});continue}
+    activeSynth++;
+    (async()=>{
      try{
-      const key=speaker.id+'|'+ttsText;
-      let base=synthesisCache.get(key);
-      if(!base){
-       const a=await synthesize(ttsText,speaker.id);
-       base=await context().decodeAudioData(a.slice(0));
-       synthesisCache.set(key,base);
-      }
-      const adjusted=respeedAudioBuffer(base,preset.speed);
-      await acceptDecodedAudio(adjusted,false,word+'_'+speaker.name+'_'+preset.name);
-      await recognize(depth==='quick');
-      wordResults.push(captureWordResult(word,speaker,depth,preset,ttsText));
-     }catch(e){
-      wordResults.push({word,speakerId:speaker.id,speakerName:speaker.name,presetId:preset.id,presetName:preset.name,ttsText,depth,reference:reverseTextReference(word)?.display||'変換不可',error:e?.message||String(e)});
-     }
-     renderWordResults();
-     await new Promise(resolve=>requestAnimationFrame(resolve));
-    }
+      const bytes=await synthesize(job.ttsText,job.speaker.id);
+      const base=await context().decodeAudioData(bytes.slice(0));
+      synthesisCache.set(job.key,base);
+      job.resolve({base});
+     }catch(error){job.resolve({error})}
+     finally{activeSynth--;pumpSynthesis()}
+    })();
    }
+  };
+  const preload=(job)=>{
+   const key=job.speaker.id+'|'+job.ttsText;
+   if(synthesisCache.has(key))return Promise.resolve({base:synthesisCache.get(key)});
+   if(synthesisPending.has(key))return synthesisPending.get(key);
+   let resolve;
+   const promise=new Promise(r=>{resolve=r});
+   synthesisPending.set(key,promise);
+   synthesisQueue.push({key,ttsText:job.ttsText,speaker:job.speaker,resolve});
+   pumpSynthesis();
+   return promise;
+  };
+  // 音素モデルの初期化と最初の4件の音声合成を同時に進める。
+  const modelReady=getPhonemeRecognizer().then(()=>({ok:true}),error=>({error}));
+  const lookAhead=4;
+  for(let i=0;i<Math.min(lookAhead,jobs.length);i++)preload(jobs[i]);
+  for(let i=0;i<jobs.length;i++){
    if(multiStop)break;
+   const {word,speaker,preset,ttsText}=jobs[i];
+   wordAtRun=word;
+   $('multiStatus').textContent=(i+1)+' / '+total+'件を解析中：'+word+' ／ '+speaker.name+' ／ '+preset.name;
+   try{
+    const audio=await preload(jobs[i]);
+    if(audio.error)throw audio.error;
+    const model=await modelReady;
+    if(model.error)throw model.error;
+    const adjusted=respeedAudioBuffer(audio.base,preset.speed);
+    // 一括処理中は表示されないWAVの生成を省略。結果選択時に従来どおり生成する。
+    await acceptDecodedAudio(adjusted,false,word+'_'+speaker.name+'_'+preset.name,true);
+    await recognize(depth==='quick');
+    wordResults.push(captureWordResult(word,speaker,depth,preset,ttsText));
+   }catch(e){
+    wordResults.push({word,speakerId:speaker.id,speakerName:speaker.name,presetId:preset.id,presetName:preset.name,ttsText,depth,reference:reverseTextReference(word)?.display||'変換不可',error:e?.message||String(e)});
+   }
+   // 次の1件だけ追加予約。大量の不要なAPI呼び出しは避ける。
+   if(!multiStop&&i+lookAhead<jobs.length)preload(jobs[i+lookAhead]);
+   // 表示の再構築は5件ごと。集計データは毎件完全保存する。
+   if(wordResults.length%5===0||i===jobs.length-1)renderWordResults();
+   await new Promise(resolve=>requestAnimationFrame(resolve));
   }
  }finally{
   multiRunning=false;setBusy(false);lockInputs(false);
   if($('autoWords').checked)nextRunNeedsNewWords=true;
   $('stop').classList.add('hide');$('stop').disabled=false;updateSpeakerCount();
   const success=wordResults.filter(r=>!r.error).length;
-  $('multiStatus').textContent=(multiStop?'途中で中止：':'')+wordResults.length+'件中 '+success+'件の解析完了'+(success<wordResults.length?'（'+(wordResults.length-success)+'件失敗）':'');
+  $('multiStatus').textContent=(multiStop?'途中で中止：':'')+wordResults.length+'件中 '+success+'件の解析完了'+(success<wordResults.length?'（'+(wordResults.length-success)+'件失敗）':'')+' ／ 処理時間 '+Math.round((performance.now()-startedAt)/1000)+'秒';
   $('copyAllWords').disabled=!wordResults.length;
   const first=wordResults.findIndex(r=>!r.error);
   if(first>=0)showWordResult(first);
