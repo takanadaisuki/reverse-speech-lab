@@ -65,6 +65,10 @@ details .field{margin-top:9px}
 .speaker-choice input{accent-color:var(--blue);width:16px;height:16px;flex-shrink:0;margin:0}
 .speaker-choice:has(input:checked){background:var(--pale);border-color:#b5c9ef}
 .speaker-choice:has(input:disabled){opacity:.65}
+.random-controls{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-top:6px}
+.auto-choice{display:flex;align-items:center;gap:5px;margin:0;font-size:11px;font-weight:600;cursor:pointer}
+.auto-choice input{accent-color:var(--blue);width:16px;height:16px;margin:0;flex-shrink:0}
+#randomInfo{margin-top:3px}
 .batch-controls{display:flex;align-items:center;gap:7px}
 .batch-controls .primary{flex:1;width:auto;margin-top:4px}
 .batch-controls .stop{margin-top:4px;flex:0 0 70px;min-height:43px}
@@ -96,8 +100,10 @@ details .field{margin-top:9px}
 </style>
 </head>
 <body><main>
-<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.3.2</span></div>
-<div class="group"><label for="word">読み上げる言葉（「、」で複数指定）</label><input id="word" type="text" value="あめ、いす、アイス、うさぎ、おこる" maxlength="240" autocomplete="off" spellcheck="false" placeholder="例：あめ、いす、アイス"><div id="textReverse" class="transform" aria-live="polite"></div>
+<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.3.3</span></div>
+<div class="group"><label for="word">読み上げる言葉（「、」で複数指定）</label><input id="word" type="text" value="" maxlength="240" autocomplete="off" spellcheck="false" placeholder="例：あめ、いす、アイス"><div id="textReverse" class="transform" aria-live="polite"></div>
+<div class="random-controls"><label class="auto-choice"><input type="checkbox" id="autoWords" checked> 毎回10語を自動で選ぶ</label><button id="shuffleWords" class="quiet small-btn" type="button">10語を入れ替え</button></div>
+<div class="small" id="randomInfo">音の種類が偏らないよう10語を選びます。手入力もできます。</div>
 <div class="compact-label space"><label>VOICEVOXの話者（複数選択可）</label><span id="speakerCount" class="small"></span></div>
 <div id="speakerGrid" class="speaker-grid" role="group" aria-label="話者を選択">
 <label class="speaker-choice"><input type="checkbox" name="speakerChoice" value="3" checked>ずんだもん</label>
@@ -118,7 +124,7 @@ details .field{margin-top:9px}
 <div class="preset-note">母音の長さ・疑問調は合成する文章を変更します。話速は生成後の音声を加工するため、音程も変化します。アクセント位置の直接指定には非対応です。</div>
 </details>
 <div class="compact-label space"><label for="depth">解析方法</label></div>
-<select id="depth"><option value="quick" selected>通常のみ（話者比較向け・高速）</option><option value="full">7パターン（詳細・時間がかかる）</option></select>
+<select id="depth"><option value="quick">通常のみ（話者比較向け・高速）</option><option value="full" selected>7パターン（詳細・時間がかかる）</option></select>
 <div class="batch-controls"><button id="start" class="primary">まとめて実験する</button><button id="stop" class="quiet stop hide" type="button">中止</button></div><div id="status" class="status" role="status" aria-live="polite"></div></div>
 <section id="multiReport" class="section hide" aria-label="単語別の解析結果"><div class="compact-label"><label>単語別の結果</label><button id="copyAllWords" class="quiet small-btn" type="button" disabled>まとめてコピー</button></div><div id="multiStatus" class="small"></div><div id="humanSummary" class="small"></div><div id="multiResults" class="multi-list"></div></section>
 <section id="report" class="section hide">
@@ -146,6 +152,40 @@ details .field{margin-top:9px}
 const $=id=>document.getElementById(id);
 let ctx,sourceBuffer,reverseBuffer,sourceUrl,reverseUrl,wordAtRun='',aiResult='',busy=false,transcriberCache=null,transcriberModel='',phonemeRecognizer=null,batchData=[],rawAiResult='';
 let wordResults=[],selectedWordIndex=-1,multiRunning=false,multiStop=false;
+// 10種類の音韻グループから各1語。単語そのものの逆読みを正解としてAIへ渡さない。
+// この候補は端末内でのみ使い、選択履歴もページを閉じると消える。
+const WORD_POOLS=[
+ ['あめ','あさ','あし','あお','あに','あわ','あき','あご','あな','あか','あむ','あせ'],
+ ['いす','いと','いぬ','いけ','いか','いし','いみ','いろ','いね','いま','いわ','いち'],
+ ['うみ','うさぎ','うで','うし','うた','うそ','うえ','うま','うき','うろこ','うに','うす'],
+ ['えき','えま','えび','えだ','えん','えがお','えり','えのき','えさ','えふ','えいが','えごま'],
+ ['おに','おこる','おと','おか','おや','おゆ','おもい','おなか','おすし','おはな','おふろ','おかし'],
+ ['かさ','かに','きく','くつ','けむり','こえ','かき','きつね','くま','けが','こま','がけ','ぎん','ぐみ'],
+ ['さかな','さる','すし','せみ','そら','ざる','すな','しお','しろ','すず','さくら','しずく','せかい'],
+ ['たまご','たこ','ちず','つき','てがみ','とり','だるま','でんわ','どあ','たね','ちか','つの','とけい'],
+ ['なみ','ねこ','にく','ぬの','のり','はな','ひと','ふね','へび','ほし','ばら','ぱん','びわ'],
+ ['やま','ゆき','よる','まど','みみ','むし','めがね','もも','らくだ','りす','るす','れもん','ろうそく','わに']
+];
+let previousRandomWords=[],nextRunNeedsNewWords=false;
+function randomInt(max){
+ if(globalThis.crypto?.getRandomValues){const a=new Uint32Array(1);globalThis.crypto.getRandomValues(a);return a[0]%max}
+ return Math.floor(Math.random()*max);
+}
+function randomTenWords(){
+ const chosen=WORD_POOLS.map(pool=>{
+  const fresh=pool.filter(w=>!previousRandomWords.includes(w));
+  const candidates=fresh.length?fresh:pool;
+  return candidates[randomInt(candidates.length)];
+ });
+ for(let i=chosen.length-1;i>0;i--){const j=randomInt(i+1);[chosen[i],chosen[j]]=[chosen[j],chosen[i]]}
+ previousRandomWords=chosen.slice();
+ $('word').value=chosen.join('、');
+ nextRunNeedsNewWords=false;
+ showTextReference();updateSpeakerCount();
+ $('randomInfo').textContent='今回の10語：'+chosen.join('、');
+ return chosen;
+}
+
 const PRESETS={
  normal:{name:'標準',speed:1},
  'first-long':{name:'語頭母音を伸ばす',speed:1},
@@ -181,7 +221,7 @@ function respeedAudioBuffer(buffer,speed){
 }
 function selectedSpeakers(){return [...document.querySelectorAll('input[name="speakerChoice"]:checked')].map(e=>({id:e.value,name:e.parentElement.textContent.trim()}))}
 function updateSpeakerCount(){const speakers=selectedSpeakers(),presets=selectedPresets(),words=splitWords($('word').value);$('speakerCount').textContent=speakers.length+'話者・'+presets.length+'発音';$('start').textContent='まとめて実験する（'+(words.length*speakers.length*presets.length)+'件）';$('credit').textContent='VOICEVOX：'+(speakers.length?speakers.map(x=>x.name).join('、'):'ずんだもん')}
-function lockInputs(lock){for(const e of document.querySelectorAll('input[name="speakerChoice"],input[name="pronunciationPreset"]'))e.disabled=lock;$('word').disabled=lock;$('depth').disabled=lock}
+function lockInputs(lock){for(const e of document.querySelectorAll('input[name="speakerChoice"],input[name="pronunciationPreset"]'))e.disabled=lock;$('word').disabled=lock;$('depth').disabled=lock;$('autoWords').disabled=lock;$('shuffleWords').disabled=lock}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 // 文字列から計算する参考値。AIの聞き取り結果とは独立させる。
 const KANA_ROMAJI={
@@ -259,9 +299,17 @@ function showTextReference(){
   $('textReverse').textContent=words.length+'語：'+words.slice(0,3).map(w=>w+' → '+(reverseTextReference(w)?.display||'変換不可')).join(' ／ ')+(words.length>3?' ほか':'');
  }
 }
-$('word').addEventListener('input',()=>{showTextReference();updateSpeakerCount()});
+$('word').addEventListener('input',()=>{
+ if($('autoWords').checked){$('autoWords').checked=false;$('randomInfo').textContent='手入力モード：入力した単語で実験します'}
+ nextRunNeedsNewWords=false;showTextReference();updateSpeakerCount();
+});
+$('shuffleWords').addEventListener('click',()=>{if(busy)return;$('autoWords').checked=true;randomTenWords()});
+$('autoWords').addEventListener('change',()=>{
+ if($('autoWords').checked)randomTenWords();
+ else{$('randomInfo').textContent='手入力モード：入力した単語で実験します';nextRunNeedsNewWords=false}
+});
 for(const e of document.querySelectorAll('input[name="speakerChoice"],input[name="pronunciationPreset"]'))e.addEventListener('change',updateSpeakerCount);
-showTextReference();updateSpeakerCount();
+randomTenWords();
 
 function status(msg,kind=''){$('status').textContent=msg;$('status').className='status '+kind}
 function setBusy(v){busy=v;for(const id of ['start','runAsr','variants'])$(id).disabled=v;if(v)$('copyBatch').disabled=true;else $('copyBatch').disabled=!batchData.length}
@@ -882,6 +930,8 @@ $('copyAllWords').addEventListener('click',async()=>{
 $('stop').addEventListener('click',()=>{multiStop=true;$('stop').disabled=true;status('現在の解析が終わったら中止します')});
 $('start').addEventListener('click',async()=>{
  if(busy)return;
+ // 自動モードでは初回は画面に表示済みの10語を使い、次回以降は新しい10語を選ぶ。
+ if($('autoWords').checked&&nextRunNeedsNewWords)randomTenWords();
  const words=splitWords($('word').value),speakers=selectedSpeakers(),presets=selectedPresets(),depth=$('depth').value;
  if(!words.length){status('言葉を入力してください','error');return}
  if(words.length>10){status('一度に検証できるのは10語までです','error');return}
@@ -929,6 +979,7 @@ $('start').addEventListener('click',async()=>{
   }
  }finally{
   multiRunning=false;setBusy(false);lockInputs(false);
+  if($('autoWords').checked)nextRunNeedsNewWords=true;
   $('stop').classList.add('hide');$('stop').disabled=false;updateSpeakerCount();
   const success=wordResults.filter(r=>!r.error).length;
   $('multiStatus').textContent=(multiStop?'途中で中止：':'')+wordResults.length+'件中 '+success+'件の解析完了'+(success<wordResults.length?'（'+(wordResults.length-success)+'件失敗）':'');
