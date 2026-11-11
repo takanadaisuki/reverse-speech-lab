@@ -128,7 +128,7 @@ details .field{margin-top:9px}
 </style>
 </head>
 <body><main>
-<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.4.2</span></div>
+<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.4.4</span></div>
 <div class="group"><label for="word">読み上げる言葉（「、」で複数指定）</label><input id="word" type="text" value="" autocomplete="off" spellcheck="false" placeholder="例：あめ、いす、アイス"><div id="textReverse" class="transform" aria-live="polite"></div>
 <div class="random-controls"><label class="auto-choice"><input type="checkbox" id="autoWords" checked> 毎回10語を自動で選ぶ</label><button id="shuffleWords" class="quiet small-btn" type="button">10語を入れ替え</button></div>
 <div class="small" id="randomInfo">音の種類が偏らないよう10語を選びます。手入力もできます。7条件の解析は維持。音声を先読みして処理し、失敗した件だけを再実行できます。処理時間も記録します。件数上限はありません。</div>
@@ -152,9 +152,10 @@ details .field{margin-top:9px}
 <div class="preset-note">母音の長さ・疑問調は合成する文章を変更します。話速は生成後の音声を加工するため、音程も変化します。アクセント位置の直接指定には非対応です。</div>
 </details>
 <div class="compact-label space"><label for="depth">解析方法</label></div>
-<select id="depth"><option value="quick">通常のみ（話者比較向け・高速）</option><option value="full" selected>7パターン（詳細・時間がかかる）</option></select>
+<select id="depth"><option value="adaptive" selected>自動高速（3条件が一致したら終了・不一致なら7条件）</option><option value="quick">通常のみ（最速・1条件）</option><option value="full">全7条件（詳細比較・従来どおり）</option></select>
+<div class="preset-note">自動高速はAI推定が3条件で完全一致した場合に残り4条件を省略します。一致は正解率ではありません。全条件の比較には「全7条件」を選択してください。</div>
 <div class="batch-controls"><button id="start" class="primary">まとめて実験する</button><button id="stop" class="quiet stop hide" type="button">中止</button></div><div id="status" class="status" role="status" aria-live="polite"></div></div>
-<section id="multiReport" class="section hide" aria-label="単語別の解析結果"><div class="compact-label"><label>単語別の結果</label><button id="copyAllWords" class="outline small-btn" type="button" disabled>全体要約をコピー</button><button id="copyReview" class="outline small-btn" type="button" disabled>実聴結果をコピー</button><button id="jumpReview" class="quiet small-btn" type="button">実聴チェックへ</button><button id="retryFailed" class="quiet small-btn hide" type="button">失敗分だけ再実行</button><button id="copyErrors" class="quiet small-btn hide" type="button">失敗理由をコピー</button></div><div id="reviewCopyInfo" class="small">実聴チェック後、判定と聞こえた言葉をまとめてコピーできます。ページ更新や新しい実験で結果は消えるため、先にコピーしてください。</div><div id="copySummaryInfo" class="small">全体傾向を1回でコピーできます。話者別の詳細要約は下の「長い詳細結果」からコピーできます。</div><details id="fullCopyDetails" class="advanced-details"><summary>長い詳細結果をコピーする（任意）</summary><button id="copyGroupWords" class="quiet small-btn" type="button" disabled>話者別要約をコピー</button><button id="copyFullWords" class="quiet small-btn" type="button" disabled>全条件の詳細をコピー</button><div class="small">話者別要約は約3,000文字ずつ分割。全条件の詳細はさらに長文です。通常は「全体要約をコピー」を使ってください。</div></details><div id="multiStatus" class="small"></div><div class="actions"><button id="waveBatch" class="quiet small-btn" type="button" disabled>波形比較を代表6件で実験</button><button id="copyWave" class="outline small-btn" type="button" disabled>波形比較結果をコピー</button></div><div id="waveBatchInfo" class="small">文字からの逆読みとAI推定を、それぞれ同じ話者で音声合成して比較します（追加の音声合成が必要）。</div><div id="errorSummary" class="status error" aria-live="polite"></div><div id="humanSummary" class="small"></div><details id="crossVoiceDetails"><summary>話者・解析条件の比較まとめ</summary><div id="crossVoiceSummary"></div></details><div id="multiResults" class="multi-list"></div><button id="moreResults" class="quiet small-btn hide" type="button">結果をさらに100件表示</button></section>
+<section id="multiReport" class="section hide" aria-label="単語別の解析結果"><div class="compact-label"><label>単語別の結果</label><button id="copyAllWords" class="outline small-btn" type="button" disabled>全体要約をコピー</button><button id="copyReview" class="outline small-btn" type="button" disabled>実聴結果をコピー</button><button id="jumpReview" class="quiet small-btn" type="button">実聴チェックへ</button><button id="retryFailed" class="quiet small-btn hide" type="button">失敗分だけ再実行</button><button id="copyErrors" class="quiet small-btn hide" type="button">失敗理由をコピー</button></div><div id="reviewCopyInfo" class="small">実聴チェック後、判定と聞こえた言葉をまとめてコピーできます。ページ更新や新しい実験で結果は消えるため、先にコピーしてください。</div><div id="copySummaryInfo" class="small">全体傾向を1回でコピーできます。話者別の詳細要約は下の「長い詳細結果」からコピーできます。</div><details id="fullCopyDetails" class="advanced-details"><summary>長い詳細結果をコピーする（任意）</summary><button id="copyGroupWords" class="quiet small-btn" type="button" disabled>話者別要約をコピー</button><button id="copyFullWords" class="quiet small-btn" type="button" disabled>全条件の詳細をコピー</button><div class="small">話者別要約は約3,000文字ずつ分割。全条件の詳細はさらに長文です。通常は「全体要約をコピー」を使ってください。</div></details><div id="multiStatus" class="small"></div><div class="actions"><button id="waveBatch" class="quiet small-btn" type="button" disabled>波形比較を異なる6単語で実験</button><button id="copyWave" class="outline small-btn" type="button" disabled>波形比較結果をコピー</button></div><div id="waveBatchInfo" class="small">異なる単語を優先。候補音声の合成を最大2件並列で先読みし、同じ候補は再利用します。単独子音の補完仮説は別集計。</div><div id="errorSummary" class="status error" aria-live="polite"></div><div id="humanSummary" class="small"></div><details id="crossVoiceDetails"><summary>話者・解析条件の比較まとめ</summary><div id="crossVoiceSummary"></div></details><div id="multiResults" class="multi-list"></div><button id="moreResults" class="quiet small-btn hide" type="button">結果をさらに100件表示</button></section>
 <section id="report" class="section hide">
 <div class="compact-label"><label id="currentWordLabel">AIの聞き取り（音声のみ）</label><span id="currentModeLabel" class="small">7パターン比較</span></div>
 <div id="asrText" class="result">解析中…</div><div id="stabilityNote"></div><div id="basis" class="candidate" aria-live="polite"></div><div id="vowelNote" class="vowel-note hide"></div><div id="durationNote" class="vowel-note hide"></div>
@@ -164,14 +165,14 @@ details .field{margin-top:9px}
 <div class="actions"><button id="runAsr" class="quiet" type="button">7パターン再解析</button><button id="variants" class="quiet" type="button">Whisperでも解析</button></div><div id="alternatives" class="candidate hide"></div>
 <div id="wavePanel" class="wave-panel hide">
 <div class="compact-label"><label>音声と文字予測の波形比較（実験）</label><span id="wavePosition" class="small"></span></div>
-<div class="small">①実際の逆再生 ②文字からの逆読みを普通に発音 ③AI推定を普通に発音。波形の形と周波数特徴を比較します。人の聞き取りの正解率ではありません。</div>
+<div class="small">①実際の逆再生 ②文字からの逆読み（変換できない子音は2通りの補完仮説を試す） ③AI推定を普通に発音。補完仮説と完全な文字候補は別集計します。</div>
 <div class="actions"><button id="waveSingle" class="outline" type="button">この音声を比較する</button><button id="waveCopySingle" class="quiet" type="button" disabled>この比較をコピー</button></div>
 <div id="waveStatus" class="status" aria-live="polite"></div>
 <canvas id="waveCanvas" width="660" height="260" aria-label="逆再生音声と文字予測・AI推定の音量波形比較"></canvas>
 <div class="wave-legend"><span><b style="background:#596579"></b>実際の逆再生</span><span><b style="background:#2873cf"></b>文字からの逆読み</span><span><b style="background:#d07b22"></b>AI推定</span></div>
 <div id="waveScore" class="wave-score">比較ボタンを押すと結果が表示されます。</div>
 <details class="advanced-details"><summary>比較用に合成した音声を聞く</summary><div class="audio-title space">文字からの逆読み</div><audio id="waveRefAudio" controls playsinline preload="metadata"></audio><div class="audio-title space">AI推定</div><audio id="waveAiAudio" controls playsinline preload="metadata"></audio></details>
-<div class="small">比較値は同じ対象内の相対距離です。話者や発音の違い・逆再生の物理的変化に影響されます。文字候補を正解として学習させません。</div>
+<div class="small">比較値は同じ対象内の相対距離であり、正解率ではありません。子音を補った候補は仮説であり、2候補から小さい距離を選ぶと有利になるため、完全な文字候補と区別します。文字候補を正解として学習させません。</div>
 </div>
 <div id="reviewPanel" class="review-panel hide">
 <div class="compact-label"><label>今回限りの実聴チェック</label><span id="reviewPosition" class="small"></span></div>
@@ -198,7 +199,26 @@ let ctx,sourceBuffer,reverseBuffer,sourceUrl,reverseUrl,wordAtRun='',aiResult=''
 let wordResults=[],selectedWordIndex=-1,multiRunning=false,multiStop=false;
 let runTiming=null,visibleResultCount=100,summaryPartIndex=0,reviewPartIndex=0;
 let phonemeRecognizerPromise=null,currentAudioMetrics=null;
-let waveBusy=false,waveCopyPart=0,waveAudioUrls=[];
+let waveBusy=false,waveCopyPart=0,waveAudioUrls=[],waveLastElapsedMs=null;
+const waveSynthCache=new Map();let waveSynthActive=0;const waveSynthWaiters=[];
+// 追加のVOICEVOXリクエストは同時2件まで。異なる候補の待ち時間を重ねる。
+async function waveSynthPermit(){
+ if(waveSynthActive<2){waveSynthActive++;return}
+ await new Promise(resolve=>waveSynthWaiters.push(resolve));
+}
+function waveSynthRelease(){const next=waveSynthWaiters.shift();if(next)next();else waveSynthActive--}
+async function waveSynthesizeCached(text,speaker){
+ const key=speaker+'|'+normalizeSpeechText(text);
+ if(waveSynthCache.has(key))return waveSynthCache.get(key);
+ const task=(async()=>{
+  await waveSynthPermit();
+  try{const bytes=await synthesize(text,speaker);return await context().decodeAudioData(bytes.slice(0))}
+  finally{waveSynthRelease()}
+ })();
+ waveSynthCache.set(key,task);
+ task.catch(()=>{if(waveSynthCache.get(key)===task)waveSynthCache.delete(key)});
+ return task;
+}
 // 10種類の音韻グループから各1語。単語そのものの逆読みを正解としてAIへ渡さない。
 // この候補は端末内でのみ使い、選択履歴もページを閉じると消える。
 const WORD_POOLS=[
@@ -616,7 +636,7 @@ function phonesToKana(raw){
 }
 function withSilence(audio){const pad=4000;const out=new Float32Array(pad*2+audio.length);out.set(audio,pad);return out}
 // 同じ逆再生音声を複数の前処理で解析する。各結果は音素AIの生出力に基づく。
-function signalVariants(signal){
+function signalVariants(signal,limit=7){
  const n=signal.length;
  const resampleSpeed=rate=>{
   const length=Math.max(1,Math.round(n/rate)),out=new Float32Array(length);
@@ -626,15 +646,16 @@ function signalVariants(signal){
   }
   return out;
  };
- const boostStart=new Float32Array(n);
- for(let i=0;i<n;i++){
-  const t=i/16000;
-  const boost=t<.16?1.65:1;
-  boostStart[i]=Math.max(-1,Math.min(1,signal[i]*boost));
- }
- const preemphasis=new Float32Array(n);
- if(n)preemphasis[0]=signal[0];
- for(let i=1;i<n;i++)preemphasis[i]=Math.max(-1,Math.min(1,signal[i]-.92*signal[i-1]));
+ const boostStart=()=>{
+  const out=new Float32Array(n);
+  for(let i=0;i<n;i++){const t=i/16000;out[i]=Math.max(-1,Math.min(1,signal[i]*(t<.16?1.65:1)))}
+  return out;
+ };
+ const preemphasis=()=>{
+  const out=new Float32Array(n);if(n)out[0]=signal[0];
+  for(let i=1;i<n;i++)out[i]=Math.max(-1,Math.min(1,signal[i]-.92*signal[i-1]));
+  return out;
+ };
  // 語頭を切る実験は5語で有効性が低かったため、音を削らず周波数を調整する。
  // IIRの前後方向処理で位相のずれを抑え、音量差はRMSで補正する。
  const filtered=(type,cutoff)=>{
@@ -659,15 +680,16 @@ function signalVariants(signal){
   for(let i=0;i<n;i++)out[i]=Math.max(-1,Math.min(1,out[i]*gain));
   return out;
  };
- return [
-  {name:'通常',audio:signal},
-  {name:'低域除去120Hz',audio:filtered('high',120)},
-  {name:'0.9倍速',audio:resampleSpeed(.9)},
-  {name:'1.1倍速',audio:resampleSpeed(1.1)},
-  {name:'先頭強調',audio:boostStart},
-  {name:'高域強調',audio:preemphasis},
-  {name:'高域除去2.6kHz',audio:filtered('low',2600)},
+ const builders=[
+  ['通常',()=>signal],
+  ['低域除去120Hz',()=>filtered('high',120)],
+  ['0.9倍速',()=>resampleSpeed(.9)],
+  ['1.1倍速',()=>resampleSpeed(1.1)],
+  ['先頭強調',boostStart],
+  ['高域強調',preemphasis],
+  ['高域除去2.6kHz',()=>filtered('low',2600)],
  ];
+ return builders.slice(0,limit).map(([name,build])=>({name,audio:build()}));
 }
 function addBatchRow(item){
  const row=document.createElement('div');row.className='batch-row'+(item.error?' error':'');
@@ -756,7 +778,7 @@ function estimateAudioOnly(consensus,acoustic,baseline){
  }
  return {kana:base,reason:'音素AIの多数決',alternative:''};
 }
-async function recognize(quick=false){
+async function recognize(mode="full"){
  if(!reverseBuffer)throw Error('先に音声を作成してください');
  $('asrText').textContent='解析中…';$('copyAi').disabled=true;$('copyBatch').disabled=true;
  $('batchResults').replaceChildren();batchData=[];aiResult='';rawAiResult='';$('basis').textContent='';
@@ -764,9 +786,19 @@ async function recognize(quick=false){
  $('phonemes').classList.add('hide');$('phonemeCandidates').classList.add('hide');$('onsetCandidates').classList.add('hide');
  const recognizer=await getPhonemeRecognizer();
  const trimmed=trimQuiet(mono16(reverseBuffer));
- const variants=quick?signalVariants(trimmed).slice(0,1):signalVariants(trimmed);
+ const quick=mode===true||mode==='quick',adaptive=mode==='adaptive';
+ const variants=signalVariants(trimmed,quick?1:adaptive?3:7);
  let baseline=null;
- for(let i=0;i<variants.length;i++){
+ for(let i=0;i<7;i++){
+  if(i>=variants.length){
+   if(!adaptive||i!==3)break;
+   const firstThree=batchData.slice(0,3);
+   const stable=firstThree.length===3&&firstThree.every(d=>!d.error&&d.kana)&&
+    firstThree.every(d=>normalizeHeard(d.kana)===normalizeHeard(firstThree[0].kana));
+   if(stable)break;
+   // 揺れがあった場合だけ、未実行の4条件を追加する。
+   variants.push(...signalVariants(trimmed,7).slice(3));
+  }
   const v=variants[i];if(!multiRunning){status('音素AIで一括解析中… '+(i+1)+' / '+variants.length+'：'+v.name);await new Promise(resolve=>requestAnimationFrame(resolve));}
   let output;
   try{
@@ -804,7 +836,7 @@ async function recognize(quick=false){
  if(estimate.alternative)extras.push('音響的な別候補：'+estimate.alternative+'（未確定）');
  if(baseline.candidates.length>1)extras.push('CTC別候補：'+baseline.candidates.slice(1).map(x=>x.kana).join(' ／ '));
  if(extras.length){other.classList.remove('hide');other.textContent=extras.join(' ／ ')}
- if(!multiRunning)status('全'+variants.length+'パターンの解析が完了しました','success');
+ if(!multiRunning)status('全'+batchData.filter(d=>d.name!=='先頭母音の音響推定').length+'パターンの解析が完了しました','success');
 }
 // 音素モデルとは独立した母音の音響解析（LPCスペクトル包絡）。
 // 日本語の「う」「お」は個人差・逆再生による変化が大きいため、参考候補として示す。
@@ -1115,7 +1147,7 @@ function compactResultLines(){
 }
 function compactChunks(){
  const lines=compactResultLines();
- const header='【逆再生実験・要約 ver.4.2】\n'+timingSummary()+'\n'+
+ const header='【逆再生実験・要約 ver.4.4】\n'+timingSummary()+'\n'+
   '全'+wordResults.length+'件 / '+lines.length+'単語・発音グループ\n'+
   '話者略称：ず=ずんだもん、め=四国めたん、つ=春日部つむぎ、り=波音リツ、青=青山龍星\n'+
   '表記：話者=AI統合推定[音声認識条件の一致/有効条件数（最大7）]、実=人の聞き取り、参考=逆ローマ字。先頭母音の音響推定は別。多数決・一致数は正解率ではありません。\n';
@@ -1157,7 +1189,7 @@ function overviewText(){
   words.get(first.word).push(label+'='+value);
  }
  const lines=[
-  '【逆再生実験・全体要約 ver.4.2】',timingSummary(),
+  '【逆再生実験・全体要約 ver.4.4】',timingSummary(),
   '実験：'+wordResults.length+'件 / '+groups.size+'発音グループ / '+words.size+'単語',
   '人の聞き取り入力：'+heard+'/'+validCases.length+'件',
   '人の耳での判定：'+validCases.filter(r=>r.review).length+'/'+validCases.length+'件（合っている '+validCases.filter(r=>r.review==='yes').length+'／違う '+validCases.filter(r=>r.review==='no').length+'／判断できない '+validCases.filter(r=>r.review==='unsure').length+'）',
@@ -1249,7 +1281,7 @@ function reviewChunks(){
   }
  }
  const fmt=map=>[...map].map(([k,v])=>k+':合'+v.yes+'/違'+v.no+'/不明'+v.unsure).join(' ／ ');
- const header=['【逆再生実験・人の実聴チェック ver.4.2】',timingSummary(),
+ const header=['【逆再生実験・人の実聴チェック ver.4.4】',timingSummary(),
   '確認 '+reviewed.length+'/'+wordResults.filter(r=>!r.error).length+'件 ／ 合っている '+c.yes+'件 ／ 違う '+c.no+'件 ／ 判断できない '+c.unsure+'件',
   '【話者別】'+fmt(bySpeaker),'【発音条件別】'+fmt(byPreset),
   '※判定は人の耳によるもの。聞こえた言葉の入力は任意。参考逆読みは正解として扱わない。','【個別の確認結果】'].join('\n')+'\n';
@@ -1312,7 +1344,7 @@ $('start').addEventListener('click',async()=>{
  if(!speakers.length){status('話者を1人以上選択してください','error');return}
  if(!presets.length){status('発音パターンを1つ以上選択してください','error');return}
  const total=words.length*speakers.length*presets.length;
- for(const url of waveAudioUrls)URL.revokeObjectURL(url);waveAudioUrls=[];
+ for(const url of waveAudioUrls)URL.revokeObjectURL(url);waveAudioUrls=[];waveSynthCache.clear();waveLastElapsedMs=null;
  setBusy(true);lockInputs(true);multiRunning=true;multiStop=false;wordResults=[];selectedWordIndex=-1;waveCopyPart=0;visibleResultCount=100;summaryPartIndex=0;reviewPartIndex=0;
  $('stop').classList.remove('hide');$('stop').disabled=false;
  $('multiReport').classList.remove('hide');$('multiResults').replaceChildren();
@@ -1321,8 +1353,8 @@ $('start').addEventListener('click',async()=>{
  const startedAt=performance.now();
  runTiming={startedAt,endedAt:null,total,cancelled:false,activeMs:null,retryCount:0};
  try{
-  // 音声合成を最大2件並列で先読み。API混雑時の失敗を減らし、認識7条件は維持。
-  // 解析条件・音素モデル・CTC候補探索・推定ルールは従来と完全に同じ。
+  // 音声合成は最大2件並列。自動高速は3条件一致で追加4条件を省略する。
+  // 全7条件を選べば従来の解析条件・音素モデル・推定ルールを維持する。
   const jobs=words.flatMap(word=>speakers.flatMap(speaker=>presets.map(preset=>({
    word,speaker,preset,ttsText:synthesisTextForPreset(word,preset.id)
   }))));
@@ -1388,7 +1420,7 @@ $('start').addEventListener('click',async()=>{
      const adjusted=respeedAudioBuffer(audio.base,preset.speed);
      // 一括処理中は表示されないWAVの生成を省略。結果選択時に従来どおり生成する。
      await acceptDecodedAudio(adjusted,false,word+'_'+speaker.name+'_'+preset.name,true);
-     await recognize(depth==='quick');
+     await recognize(depth);
      const result=captureWordResult(word,speaker,depth,preset,ttsText);
      wordResults.push(result);
      recognitionCache.set(key,result);
@@ -1426,7 +1458,7 @@ $('start').addEventListener('click',async()=>{
 function errorReport(){
  const failed=wordResults.map((r,i)=>({r,i})).filter(x=>x.r.error);
  const counts=new Map();for(const {r} of failed)counts.set(r.error,(counts.get(r.error)||0)+1);
- return ['【逆再生実験・失敗診断 ver.4.2】',timingSummary(),
+ return ['【逆再生実験・失敗診断 ver.4.4】',timingSummary(),
   '失敗 '+failed.length+'/'+wordResults.length+'件',
   ...[...counts].map(([reason,count])=>count+'件：'+reason),
   '【失敗した対象（最大20件）】',
@@ -1476,7 +1508,7 @@ $('retryFailed').addEventListener('click',async()=>{
     if(ready.error)throw ready.error;
     wordAtRun=old.word;
     await acceptDecodedAudio(respeedAudioBuffer(base,preset.speed),false,old.word+'_'+speaker.name+'_'+preset.name,true);
-    await recognize(old.depth==='quick');
+    await recognize(old.depth);
     wordResults[index]=captureWordResult(old.word,speaker,old.depth,preset,old.ttsText);
     wordResults[index].human=old.human||'';
    }catch(error){
@@ -1508,7 +1540,7 @@ $('variants').addEventListener('click',async()=>{if(busy)return;setBusy(true);tr
 $('copyAi').addEventListener('click',async()=>{const ok=await copyText(aiResult);status(ok?'推定結果をコピーしました':'コピーできませんでした',ok?'success':'error')});
 $('copyBatch').addEventListener('click',async()=>{const ok=await copyText(batchText());status(ok?'全結果をコピーしました':'コピーできませんでした',ok?'success':'error')});
 
-// ver.4.2: acoustic-only validation of text-derived reverse reading.
+// ver.4.4: acoustic-only validation of text-derived reverse reading.
 // Compare the physically reversed original audio with forward TTS of (a) text-reverse and (b) AI output.
 // The text candidate is never used as a correct label or to modify AI output.
 function waveRmsSeries(buffer,points=120){
@@ -1525,15 +1557,17 @@ function waveFeatures(buffer){
  // Dynamic time warping tolerates timing differences, unlike raw waveform correlation.
  const samples=mono16(buffer),win=400,hop=200,freqs=[180,260,370,520,730,980,1250,1570,1900,2320,2780,3370];
  const n=Math.min(samples.length,16000*5),frames=[];
+ const window=new Float32Array(win),coefs=freqs.map(hz=>2*Math.cos(2*Math.PI*hz/16000));
+ for(let j=0;j<win;j++)window[j]=.5-.5*Math.cos(2*Math.PI*j/(win-1));
+ const frame=new Float32Array(win);
  for(let at=0;at+win<=n;at+=hop){
-  let rms=0;const frame=new Float32Array(win);
+  let rms=0;
   for(let j=0;j<win;j++){
-   const x=samples[at+j]*(.5-.5*Math.cos(2*Math.PI*j/(win-1)));
-   frame[j]=x;rms+=x*x;
+   const x=samples[at+j]*window[j];frame[j]=x;rms+=x*x;
   }
   const energy=Math.sqrt(rms/win),logs=[];
-  for(const hz of freqs){
-   const omega=2*Math.PI*hz/16000,coef=2*Math.cos(omega);let a=0,b=0;
+  for(const coef of coefs){
+   let a=0,b=0;
    for(let j=0;j<win;j++){const next=frame[j]+coef*a-b;b=a;a=next}
    const power=Math.max(1e-10,a*a+b*b-coef*a*b);
    logs.push(Math.log1p(power*20));
@@ -1547,7 +1581,8 @@ function waveFeatures(buffer){
 }
 function waveDtw(a,b){
  if(!a.length||!b.length)return null;
- const na=a.length,nb=b.length,cols=nb+1,prev=new Float64Array(cols).fill(Infinity),curr=new Float64Array(cols);
+ const na=a.length,nb=b.length,cols=nb+1;
+ let prev=new Float64Array(cols).fill(Infinity),curr=new Float64Array(cols);
  prev[0]=0;
  for(let i=1;i<=na;i++){
   curr.fill(Infinity);
@@ -1556,7 +1591,7 @@ function waveDtw(a,b){
    cost=Math.sqrt(cost/a[i-1].length);
    curr[j]=cost+Math.min(prev[j-1],prev[j],curr[j-1]);
   }
-  prev.set(curr);
+  [prev,curr]=[curr,prev];
  }
  return prev[nb]/Math.max(na,nb);
 }
@@ -1574,26 +1609,55 @@ function drawWave(result){
   c.stroke();c.globalAlpha=1;
  }
 }
+// A reversed romanized spelling may end in consonants that Japanese TTS cannot say.
+// Try two *explicitly approximate* vowel completions instead of silently dropping them.
+// These scores are kept separate from complete text-derived readings.
+function waveTextCandidates(ref){
+ if(!ref)return [];
+ if(!ref.tail)return ref.kana?[{text:ref.kana,approx:false}]:[];
+ const display=ref.display||'';
+ const candidates=[];
+ for(const vowel of ['u','i']){
+  let unresolved=false;
+  const text=display.replace(/ィ〈y〉/g,'〈y〉').replace(/〈([a-z]+)〉/g,(_,chars)=>{
+   let replacement='';
+   for(const ch of chars){
+    const kana=ROMAJI_KANA[ch+vowel]||ROMAJI_KANA[ch+'a'];
+    if(!kana){unresolved=true;return ''}
+    replacement+=kana;
+   }
+   return replacement;
+  });
+  if(!unresolved&&/^[ぁ-ゖー]+$/.test(text)&&!candidates.some(c=>c.text===text))candidates.push({text,approx:true});
+ }
+ return candidates;
+}
 function waveSummaryLine(r){
  const w=r.waveCompare;if(!w)return '';
  const fmt=x=>x===null||!Number.isFinite(x)?'計算不可':x.toFixed(3);
- const label=w.refError?'文字候補生成不可':(w.reference===null?'文字候補なし':'文字候補 '+fmt(w.reference));
+ const label=w.refError?'文字候補生成不可':(w.reference===null?'文字候補なし':(w.referenceApprox?'文字補完仮説 ':'文字候補 ')+fmt(w.reference));
  const ai=w.aiError?'AI候補生成不可':(w.ai===null?'AI候補なし':'AI候補 '+fmt(w.ai));
- const closer=w.reference!==null&&w.ai!==null?(Math.abs(w.reference-w.ai)<.01?'ほぼ同距離':w.reference<w.ai?'文字候補が近い':'AI候補が近い'):'比較不可';
- return r.word+' / '+r.speakerName+' / '+(r.presetName||'標準')+'｜文字:'+w.referenceText+'｜AI:'+w.aiText+'｜'+label+' / '+ai+'｜'+closer+(w.refError?'｜文字失敗:'+w.refError:'')+(w.aiError?'｜AI失敗:'+w.aiError:'');
+ let closer='比較不可';
+ if(w.reference!==null&&w.ai!==null){
+  const comparison=Math.abs(w.reference-w.ai)<.01?'ほぼ同距離':w.reference<w.ai?'文字候補が近い':'AI候補が近い';
+  closer=w.referenceApprox?'暫定比較（'+comparison+'）':comparison;
+ }
+ const variants=w.referenceApprox&&w.refVariants?.length?'｜補完候補:'+w.refVariants.map(x=>x.text+'='+fmt(x.score)).join(' / '):'';
+ return r.word+' / '+r.speakerName+' / '+(r.presetName||'標準')+'｜文字:'+w.referenceText+'｜AI:'+w.aiText+'｜'+label+' / '+ai+'｜'+closer+variants+(w.refError?'｜文字失敗:'+w.refError:'')+(w.aiError?'｜AI失敗:'+w.aiError:'');
 }
 function waveResults(){return wordResults.filter(r=>r.waveCompare)}
 function waveReportParts(){
- const results=waveResults(),counts={ref:0,ai:0,tie:0,unavailable:0};
+ const results=waveResults(),counts={ref:0,ai:0,tie:0,approx:0,unavailable:0};
  for(const r of results){const w=r.waveCompare;
   if(w.reference===null||w.ai===null)counts.unavailable++;
+  else if(w.referenceApprox)counts.approx++;
   else if(Math.abs(w.reference-w.ai)<.01)counts.tie++;
   else if(w.reference<w.ai)counts.ref++;else counts.ai++;
  }
- const header='【文字逆読み vs AI 音響比較 ver.4.2】\n'+timingSummary()+'\n'+
-  '比較 '+results.length+'件｜文字候補が近い '+counts.ref+' / AI候補が近い '+counts.ai+' / ほぼ同距離 '+counts.tie+' / 比較不可 '+counts.unavailable+'\n'+
+ const header='【文字逆読み vs AI 音響比較 ver.4.4】\n'+timingSummary()+'\n'+
+  '比較 '+results.length+'件｜直近の波形比較処理時間 '+(waveLastElapsedMs===null?'未計測':formatElapsed(waveLastElapsedMs))+'｜文字候補が近い '+counts.ref+' / AI候補が近い '+counts.ai+' / ほぼ同距離 '+counts.tie+' / 補完仮説の暫定比較 '+counts.approx+' / 比較不可 '+counts.unavailable+'\n'+
   '方法：逆再生音声と同一話者が普通に読んだ候補音声を、時間伸縮を許すDTWで比較（対数周波数特徴12周波数点＋音量）。数値は小さいほど近い相対距離であり、正解率・確率ではありません。\n'+
-  '注意：元の逆再生音声と合成音声は生成過程が違うため、距離が小さい候補が人の耳で正解とは限りません。\n';
+  '注意：元の逆再生音声と合成音声は生成過程が違うため、距離が小さい候補が人の耳で正解とは限りません。単独子音の補完仮説は2通りのうち最小距離を使うため、通常の比較とは別集計です。\n';
  const lines=results.map((r,i)=>(i+1)+'. '+waveSummaryLine(r)),parts=[];let chunk='';
  for(const line of lines){if(chunk&&header.length+chunk.length+line.length+2>3100){parts.push(chunk.trimEnd());chunk=''}chunk+=line+'\n'}
  if(chunk||!parts.length)parts.push(chunk.trimEnd());
@@ -1623,56 +1687,81 @@ function showWavePanel(){
 async function waveCompareOne(r){
  if(!r||r.error||!r.reversed)return;
  if(r.waveCompare){for(const url of [r.waveCompare.referenceAudioUrl,r.waveCompare.aiAudioUrl])if(url)URL.revokeObjectURL(url)}
- const reference=reverseTextReference(r.word),referenceText=reference&&!reference.tail?reference.kana:'';
+ const reference=reverseTextReference(r.word),refCandidates=waveTextCandidates(reference);
  const aiText=normalizeHeard(r.ai);
  const target=waveFeatures(r.reversed),envelopes={target:waveRmsSeries(r.reversed)};
- const result={referenceText:referenceText||'生成不可',aiText:aiText||'認識なし',reference:null,ai:null,control:null,refError:'',aiError:'',envelopes,referenceAudioUrl:null,aiAudioUrl:null};
- const speaker=r.speakerId;
- const candidates=[['reference',referenceText],['ai',aiText]];
- const cache=new Map();
- for(const [name,text] of candidates){
-  if(!text){result[name==='reference'?'refError':'aiError']=name==='reference'?'文字逆読みが不完全（未変換の子音あり）':'AI推定が空';continue}
+ const result={referenceText:'生成不可',aiText:aiText||'認識なし',reference:null,ai:null,control:null,refError:'',aiError:'',referenceApprox:!!reference?.tail,refVariants:[],envelopes,referenceAudioUrl:null,aiAudioUrl:null};
+ if(!refCandidates.length)result.refError=reference?.tail?'子音を発音可能な仮説に補完できませんでした':'文字逆読みを変換できませんでした';
+ // 文字候補2通り＋AI候補を同時に準備。ただしAPIへの実接続は最大2並列。
+ // Promise.allSettledで片方が失敗しても他の比較結果を残す。
+ const tasks=refCandidates.map(async candidate=>{
   try{
-   $('waveStatus').textContent=r.word+' / '+r.speakerName+'：'+(name==='reference'?'文字候補':'AI候補')+'「'+text+'」を音声合成中…';
-   let b=cache.get(text);
-   if(!b){const bytes=await synthesize(text,speaker);b=await context().decodeAudioData(bytes.slice(0));cache.set(text,b)}
-   const features=waveFeatures(b);
-   result[name]=waveDtw(target,features);
-   result.envelopes[name]=waveRmsSeries(b);
-   if(name==='reference')result.control=waveDtw(target,waveFeatures(reverseAudio(b)));
-   const url=URL.createObjectURL(wav(b));waveAudioUrls.push(url);
-   result[name==='reference'?'referenceAudioUrl':'aiAudioUrl']=url;
-  }catch(error){result[name==='reference'?'refError':'aiError']=error?.message||String(error)}
+   const b=await waveSynthesizeCached(candidate.text,r.speakerId);
+   return {candidate,b,score:waveDtw(target,waveFeatures(b))};
+  }catch(error){return {candidate,error:error?.message||String(error)}}
+ });
+ const aiTask=aiText?waveSynthesizeCached(aiText,r.speakerId).then(b=>({b,score:waveDtw(target,waveFeatures(b))}),error=>({error:error?.message||String(error)})):Promise.resolve({error:'AI推定が空'});
+ const [refRows,aiRow]=await Promise.all([Promise.all(tasks),aiTask]);
+ for(const row of refRows){
+  if(row.error){result.refError=(result.refError?result.refError+' / ':'')+row.candidate.text+': '+row.error;continue}
+  result.refVariants.push({text:row.candidate.text,score:row.score});
+  if(row.score!==null&&(result.reference===null||row.score<result.reference)){
+   result.reference=row.score;result.referenceText=row.candidate.text;
+   result.envelopes.reference=waveRmsSeries(row.b);
+   result.control=waveDtw(target,waveFeatures(reverseAudio(row.b)));
+   const url=URL.createObjectURL(wav(row.b));waveAudioUrls.push(url);
+   if(result.referenceAudioUrl)URL.revokeObjectURL(result.referenceAudioUrl);
+   result.referenceAudioUrl=url;
+  }
  }
- // Store the comparison even if one TTS request failed. Original AI output is never overwritten.
+ if(result.reference!==null)result.refError='';
+ if(aiRow.error)result.aiError=aiRow.error;
+ else{
+  result.ai=aiRow.score;result.envelopes.ai=waveRmsSeries(aiRow.b);
+  const url=URL.createObjectURL(wav(aiRow.b));waveAudioUrls.push(url);result.aiAudioUrl=url;
+ }
  r.waveCompare=result;return result;
 }
 async function runWaveExperiment(rows){
  if(waveBusy||busy||multiRunning||!rows.length)return;
  waveBusy=true;setBusy(true);$('waveSingle').disabled=true;$('waveBatch').disabled=true;
+ const began=performance.now();
  try{
-  for(let i=0;i<rows.length;i++){
-   const r=rows[i];$('waveStatus').textContent='波形比較 '+(i+1)+'/'+rows.length+'：'+r.word+' / '+r.speakerName;
-   await waveCompareOne(r);
-   if(wordResults[selectedWordIndex]===r)showWavePanel();
-   await new Promise(resolve=>requestAnimationFrame(resolve));
-  }
+  // 最大2件の比較を並行。音声合成は共有キューで2接続に制限する。
+  let next=0,done=0;
+  const worker=async()=>{
+   while(next<rows.length){
+    const i=next++,r=rows[i];
+    try{await waveCompareOne(r)}
+    catch(error){r.waveCompare={reference:null,ai:null,referenceText:'生成不可',aiText:r.ai||'認識なし',refError:error?.message||String(error),aiError:'',envelopes:{target:waveRmsSeries(r.reversed)}}}
+    done++;
+    $('waveStatus').textContent='波形比較 '+done+'/'+rows.length+'件 ／ 経過 '+formatElapsed(performance.now()-began);
+   }
+  };
+  await Promise.all(Array.from({length:Math.min(2,rows.length)},()=>worker()));
   $('waveStatus').textContent=rows.length+'件の比較が完了しました';
  }catch(error){$('waveStatus').textContent='比較中にエラー：'+(error?.message||String(error))}
- finally{waveBusy=false;setBusy(false);refreshWaveCopy();showWavePanel()}
+ finally{waveLastElapsedMs=performance.now()-began;waveBusy=false;setBusy(false);refreshWaveCopy();showWavePanel()}
 }
 $('waveSingle').addEventListener('click',()=>{
  const r=wordResults[selectedWordIndex];if(r)runWaveExperiment([r]);
 });
 $('waveBatch').addEventListener('click',()=>{
- // One representative speaker per word/preset group, at most six to avoid excess API requests.
- const seen=new Set(),rows=[];
+ // Select at most one standard-pronunciation result per distinct word.
+ // Prefer fully convertible reference readings; fill remaining slots with
+ // explicitly marked approximations. Avoid six presets of the same word.
+ const byWord=new Map();
  for(const r of wordResults){
-  const key=JSON.stringify([r.word,r.presetId||'normal']);
-  if(r.error||!r.reversed||seen.has(key)||r.waveCompare)continue;
-  seen.add(key);rows.push(r);if(rows.length===6)break;
+  if(r.error||!r.reversed||r.waveCompare||byWord.has(r.word))continue;
+  if(r.presetId==='normal')byWord.set(r.word,r);
  }
- if(!rows.length){$('waveBatchInfo').textContent='未比較の代表グループはありません。個別の結果から再比較できます。';return}
+ for(const r of wordResults){
+  if(r.error||!r.reversed||r.waveCompare||byWord.has(r.word))continue;
+  byWord.set(r.word,r);
+ }
+ const candidates=[...byWord.values()];
+ const rows=[...candidates.filter(r=>!reverseTextReference(r.word)?.tail),...candidates.filter(r=>!!reverseTextReference(r.word)?.tail)].slice(0,6);
+ if(!rows.length){$('waveBatchInfo').textContent='未比較の代表単語はありません。個別の結果から再比較できます。';return}
  runWaveExperiment(rows);
 });
 $('copyWave').addEventListener('click',async()=>{
@@ -1683,7 +1772,7 @@ $('copyWave').addEventListener('click',async()=>{
 });
 $('waveCopySingle').addEventListener('click',async()=>{
  const r=wordResults[selectedWordIndex];if(!r?.waveCompare)return;
- const ok=await copyText('【波形比較 ver.4.2】\n'+waveSummaryLine(r));
+ const ok=await copyText('【波形比較 ver.4.4】\n'+waveSummaryLine(r));
  $('waveStatus').textContent=ok?'この比較結果をコピーしました':'コピーに失敗しました';
 });
 
