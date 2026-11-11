@@ -105,10 +105,10 @@ details .field{margin-top:9px}
 </style>
 </head>
 <body><main>
-<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.3.5</span></div>
-<div class="group"><label for="word">読み上げる言葉（「、」で複数指定）</label><input id="word" type="text" value="" maxlength="240" autocomplete="off" spellcheck="false" placeholder="例：あめ、いす、アイス"><div id="textReverse" class="transform" aria-live="polite"></div>
+<div class="page-header"><h1>逆再生音声 実験室</h1><span class="version" aria-label="バージョン">ver.3.6</span></div>
+<div class="group"><label for="word">読み上げる言葉（「、」で複数指定）</label><input id="word" type="text" value="" autocomplete="off" spellcheck="false" placeholder="例：あめ、いす、アイス"><div id="textReverse" class="transform" aria-live="polite"></div>
 <div class="random-controls"><label class="auto-choice"><input type="checkbox" id="autoWords" checked> 毎回10語を自動で選ぶ</label><button id="shuffleWords" class="quiet small-btn" type="button">10語を入れ替え</button></div>
-<div class="small" id="randomInfo">音の種類が偏らないよう10語を選びます。手入力もできます。7条件の解析内容は変えず、音声生成を先読みして待ち時間を短縮します。</div>
+<div class="small" id="randomInfo">音の種類が偏らないよう10語を選びます。手入力もできます。7条件の解析は維持。音声の先読み・重複解析の再利用で高速化し、処理時間も記録します。件数上限はありません。</div>
 <div class="compact-label space"><label>VOICEVOXの話者（複数選択可）</label><span id="speakerCount" class="small"></span></div>
 <div id="speakerGrid" class="speaker-grid" role="group" aria-label="話者を選択">
 <label class="speaker-choice"><input type="checkbox" name="speakerChoice" value="3" checked>ずんだもん</label>
@@ -131,7 +131,7 @@ details .field{margin-top:9px}
 <div class="compact-label space"><label for="depth">解析方法</label></div>
 <select id="depth"><option value="quick">通常のみ（話者比較向け・高速）</option><option value="full" selected>7パターン（詳細・時間がかかる）</option></select>
 <div class="batch-controls"><button id="start" class="primary">まとめて実験する</button><button id="stop" class="quiet stop hide" type="button">中止</button></div><div id="status" class="status" role="status" aria-live="polite"></div></div>
-<section id="multiReport" class="section hide" aria-label="単語別の解析結果"><div class="compact-label"><label>単語別の結果</label><button id="copyAllWords" class="quiet small-btn" type="button" disabled>まとめてコピー</button></div><div id="multiStatus" class="small"></div><div id="humanSummary" class="small"></div><details id="crossVoiceDetails"><summary>話者・解析条件の比較まとめ</summary><div id="crossVoiceSummary"></div></details><div id="multiResults" class="multi-list"></div></section>
+<section id="multiReport" class="section hide" aria-label="単語別の解析結果"><div class="compact-label"><label>単語別の結果</label><button id="copyAllWords" class="quiet small-btn" type="button" disabled>まとめてコピー</button></div><div id="multiStatus" class="small"></div><div id="humanSummary" class="small"></div><details id="crossVoiceDetails"><summary>話者・解析条件の比較まとめ</summary><div id="crossVoiceSummary"></div></details><div id="multiResults" class="multi-list"></div><button id="moreResults" class="quiet small-btn hide" type="button">結果をさらに100件表示</button></section>
 <section id="report" class="section hide">
 <div class="compact-label"><label id="currentWordLabel">AIの聞き取り（音声のみ）</label><span id="currentModeLabel" class="small">7パターン比較</span></div>
 <div id="asrText" class="result">解析中…</div><div id="stabilityNote"></div><div id="basis" class="candidate" aria-live="polite"></div><div id="vowelNote" class="vowel-note hide"></div><div id="durationNote" class="vowel-note hide"></div>
@@ -157,6 +157,7 @@ details .field{margin-top:9px}
 const $=id=>document.getElementById(id);
 let ctx,sourceBuffer,reverseBuffer,sourceUrl,reverseUrl,wordAtRun='',aiResult='',busy=false,transcriberCache=null,transcriberModel='',phonemeRecognizer=null,batchData=[],rawAiResult='';
 let wordResults=[],selectedWordIndex=-1,multiRunning=false,multiStop=false;
+let runTiming=null,visibleResultCount=100;
 let phonemeRecognizerPromise=null,currentAudioMetrics=null;
 // 10種類の音韻グループから各1語。単語そのものの逆読みを正解としてAIへ渡さない。
 // この候補は端末内でのみ使い、選択履歴もページを閉じると消える。
@@ -345,7 +346,7 @@ function normalizeSpeechText(text){
   ? value.replace(/[ぁ-ゖ]/g,c=>String.fromCharCode(c.charCodeAt(0)+96))
   : value;
 }
-async function synthesize(text,speaker){const speechText=normalizeSpeechText(text);const u=new URL('https://api.tts.quest/v3/voicevox/synthesis');u.searchParams.set('text',speechText);u.searchParams.set('speaker',speaker);if(!multiRunning)status('音声を生成中…');const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('音声生成に失敗しました（'+r.status+'）');const info=await r.json();if(!info.success)throw Error('音声生成が制限されています。時間をおいて再試行してください');if(!trusted(info.wavDownloadUrl)||!trusted(info.audioStatusUrl))throw Error('音声のURLを確認できませんでした');for(let i=0;i<130;i++){const s=await fetch(info.audioStatusUrl,{cache:'no-store'});if(s.ok){const j=await s.json();if(j.isAudioError)throw Error('音声生成に失敗しました');if(j.isAudioReady){const w=await fetch(info.wavDownloadUrl,{cache:'no-store'});if(!w.ok)throw Error('音声を取得できませんでした');return w.arrayBuffer()}}await sleep(1000)}throw Error('音声生成がタイムアウトしました')}
+async function synthesize(text,speaker){const speechText=normalizeSpeechText(text);const u=new URL('https://api.tts.quest/v3/voicevox/synthesis');u.searchParams.set('text',speechText);u.searchParams.set('speaker',speaker);if(!multiRunning)status('音声を生成中…');let r;for(let retry=0;retry<3;retry++){r=await fetch(u,{cache:'no-store'});if(r.ok)break;if(![429,500,502,503,504].includes(r.status)||retry===2)throw Error('音声生成に失敗しました（'+r.status+'）');await sleep(900*(retry+1))}const info=await r.json();if(!info.success)throw Error('音声生成が制限されています。時間をおいて再試行してください');if(!trusted(info.wavDownloadUrl)||!trusted(info.audioStatusUrl))throw Error('音声のURLを確認できませんでした');for(let i=0;i<240;i++){const s=await fetch(info.audioStatusUrl,{cache:'no-store'});if(s.ok){const j=await s.json();if(j.isAudioError)throw Error('音声生成に失敗しました');if(j.isAudioReady){const w=await fetch(info.wavDownloadUrl,{cache:'no-store'});if(!w.ok)throw Error('音声を取得できませんでした');return w.arrayBuffer()}}await sleep(500)}throw Error('音声生成がタイムアウトしました')}
 function mono16(buffer){const rate=16000,n=Math.max(1,Math.round(buffer.duration*rate)),out=new Float32Array(n),src=Array.from({length:buffer.numberOfChannels},(_,i)=>buffer.getChannelData(i));for(let i=0;i<n;i++){const pos=i*buffer.sampleRate/rate,j=Math.min(buffer.length-1,Math.floor(pos)),k=Math.min(buffer.length-1,j+1),f=pos-j;let sum=0;for(const ch of src)sum+=ch[j]*(1-f)+ch[k]*f;out[i]=sum/src.length}return out}
 function normalize(x){let max=0;for(const v of x)max=Math.max(max,Math.abs(v));const gain=max>0?Math.min(2.8,.88/max):1;const out=new Float32Array(x.length);for(let i=0;i<x.length;i++)out[i]=x[i]*gain;return out}
 function tidy(text){return (text||'').trim().replace(/^[\s、。，．!！?？「」『』]+|[\s、。，．!！?？「」『』]+$/g,'')}
@@ -576,7 +577,7 @@ function addBatchRow(item){
  if(item.raw||item.error){const detail=document.createElement('div');detail.className='detail';detail.textContent=item.error||('音素：'+item.raw);row.append(detail)}
  $('batchResults').append(row);
 }
-function batchText(){const selected=wordResults[selectedWordIndex];return '元の言葉：'+(wordAtRun||$('word').value.trim())+(selected?'\n話者：'+selected.speakerName+'\n発音：'+(selected.presetName||'標準')+'\n合成表記：'+(selected.ttsText||selected.word):'')+'\n文字からの逆読み（参考）：'+(reverseTextReference(wordAtRun)?.display||'変換不可')+'\n'+batchData.map(x=>x.name+'：'+(x.error?'失敗 '+x.error:(x.kana||'認識なし'))).join('\n')+'\n音素AI単独：'+(rawAiResult||'未認識')+'\n音声のみの統合推定：'+(aiResult||'未認識')+'\n'+(stabilityText(selected)||'')+'\n'+(vowelRepeatAnalysis(aiResult,wordAtRun,$('human').value)||'連続母音：検出なし')+'\n'+durationText(selected?.audioMetrics||audioDurationMetrics(reverseBuffer))+'\n実際の聞き取り：'+$('human').value.trim()}
+function batchText(){const selected=wordResults[selectedWordIndex];return (runTiming?timingSummary()+'\n':'')+'元の言葉：'+(wordAtRun||$('word').value.trim())+(selected?'\n話者：'+selected.speakerName+'\n発音：'+(selected.presetName||'標準')+'\n合成表記：'+(selected.ttsText||selected.word):'')+'\n文字からの逆読み（参考）：'+(reverseTextReference(wordAtRun)?.display||'変換不可')+'\n'+batchData.map(x=>x.name+'：'+(x.error?'失敗 '+x.error:(x.kana||'認識なし'))).join('\n')+'\n音素AI単独：'+(rawAiResult||'未認識')+'\n音声のみの統合推定：'+(aiResult||'未認識')+'\n'+(stabilityText(selected)||'')+'\n'+(vowelRepeatAnalysis(aiResult,wordAtRun,$('human').value)||'連続母音：検出なし')+'\n'+durationText(selected?.audioMetrics||audioDurationMetrics(reverseBuffer))+'\n実際の聞き取り：'+$('human').value.trim()}
 // 無音を切り詰めるのは認識入力だけ。保存・再生する音声は変更しない。
 // 語頭の小さな母音を切らないよう、RMSの相対閾値を低めにし前後30ms残す。
 function trimQuiet(signal,rate=16000){
@@ -915,7 +916,7 @@ function stabilityText(r){
 }
 function renderWordResults(){
  const list=$('multiResults');list.replaceChildren();let lastWord='';
- wordResults.forEach((r,i)=>{
+ wordResults.slice(0,visibleResultCount).forEach((r,i)=>{
   if(r.word!==lastWord){const group=document.createElement('div');group.className='multi-group-title';group.textContent=r.word;list.append(group);lastWord=r.word}
   const b=document.createElement('button');b.type='button';
   b.className='multi-item'+(i===selectedWordIndex?' selected':'')+(r.error?' failed':'')+(r.human?.trim()&&!r.error?(normalizeHeard(r.human)===normalizeHeard(r.ai)?' match-yes':' match-no'):'');
@@ -927,6 +928,8 @@ function renderWordResults(){
   if(r.human){b.title='実際の聞き取り：'+r.human}
   b.addEventListener('click',()=>showWordResult(i));list.append(b);
  });
+ $('moreResults').classList.toggle('hide',wordResults.length<=visibleResultCount);
+ $('moreResults').textContent='さらに100件表示（'+Math.min(visibleResultCount,wordResults.length)+' / '+wordResults.length+'件）';
  $('multiReport').classList.toggle('hide',wordResults.length===0);
  $('copyAllWords').disabled=multiRunning||wordResults.length===0;
  const judged=wordResults.filter(r=>r.human?.trim()&&!r.error);
@@ -960,9 +963,19 @@ function showWordResult(index){
  reverseUrl=audioUrl('reverseAudio','reverseDownload',wav(reverseBuffer),reverseUrl,name+'_reversed.wav');
  status(r.word+'の結果を表示中','success');renderWordResults();
 }
+function formatElapsed(ms){
+ const seconds=Math.max(0,ms)/1000;
+ return seconds<60?seconds.toFixed(1)+'秒':Math.floor(seconds/60)+'分'+(seconds%60).toFixed(1)+'秒';
+}
+function timingSummary(){
+ if(!runTiming)return '処理時間：未計測';
+ const ms=(runTiming.endedAt??performance.now())-runTiming.startedAt;
+ const completed=wordResults.length,failed=wordResults.filter(r=>r.error).length;
+ return '【処理時間】'+formatElapsed(ms)+' ／ 実施 '+completed+'/'+runTiming.total+'件 ／ 成功 '+(completed-failed)+'件 ／ 失敗 '+failed+'件'+(runTiming.cancelled?' ／ 途中中止':'')+' ／ 1件あたり平均 '+(completed?(ms/1000/completed).toFixed(2)+'秒':'未計測');
+}
 function allWordsText(){
  if(selectedWordIndex>=0&&wordResults[selectedWordIndex]&&!wordResults[selectedWordIndex].error){wordResults[selectedWordIndex].human=$('human').value}
- return '【単語・話者の比較まとめ】\n'+comparisonSummaryLines().join('\n')+'\n※一致の多さは正確さを保証しません。\n\n'+wordResults.map((r,i)=>[
+ return timingSummary()+'\n\n【単語・話者の比較まとめ】\n'+comparisonSummaryLines().join('\n')+'\n※一致の多さは正確さを保証しません。\n\n'+wordResults.map((r,i)=>[
   '【'+(i+1)+'】'+r.word+' ／ '+(r.speakerName||'音声ファイル')+' ／ '+(r.presetName||'標準'),
   '合成に使った表記：'+(r.ttsText||r.word),
   '文字からの逆読み（参考）：'+r.reference,
@@ -990,6 +1003,7 @@ $('human').addEventListener('input',()=>{
  updateHumanMatch();setVowelNote(aiResult,wordAtRun,$('human').value);
  if(!multiRunning&&wordResults.length)renderWordResults();
 });
+$('moreResults').addEventListener('click',()=>{visibleResultCount+=100;renderWordResults()});
 $('copyAllWords').addEventListener('click',async()=>{
  const ok=await copyText(allWordsText());status(ok?'全単語の結果をコピーしました':'コピーできませんでした',ok?'success':'error');
 });
@@ -1000,27 +1014,32 @@ $('start').addEventListener('click',async()=>{
  if($('autoWords').checked&&nextRunNeedsNewWords)randomTenWords();
  const words=splitWords($('word').value),speakers=selectedSpeakers(),presets=selectedPresets(),depth=$('depth').value;
  if(!words.length){status('言葉を入力してください','error');return}
- if(words.length>10){status('一度に検証できるのは10語までです','error');return}
  if(!speakers.length){status('話者を1人以上選択してください','error');return}
  if(!presets.length){status('発音パターンを1つ以上選択してください','error');return}
  const total=words.length*speakers.length*presets.length;
- if(total>60){status('一度に60件までです。単語・話者・発音パターンを減らしてください','error');return}
- setBusy(true);lockInputs(true);multiRunning=true;multiStop=false;wordResults=[];selectedWordIndex=-1;
+ setBusy(true);lockInputs(true);multiRunning=true;multiStop=false;wordResults=[];selectedWordIndex=-1;visibleResultCount=100;
  $('stop').classList.remove('hide');$('stop').disabled=false;
  $('multiReport').classList.remove('hide');$('multiResults').replaceChildren();
  $('copyAllWords').disabled=true;$('report').classList.add('hide');$('media').classList.add('hide');
  $('multiStatus').textContent='0 / '+total+'件';
  const startedAt=performance.now();
+ runTiming={startedAt,endedAt:null,total,cancelled:false};
  try{
-  // 音声合成を最大2件並列で先読みし、音素AIの7条件解析と通信待ちを重ねる。
+  // 音声合成を最大3件並列で先読みし、音素AIの7条件解析と通信待ちを重ねる。
   // 解析条件・音素モデル・CTC候補探索・推定ルールは従来と完全に同じ。
   const jobs=words.flatMap(word=>speakers.flatMap(speaker=>presets.map(preset=>({
    word,speaker,preset,ttsText:synthesisTextForPreset(word,preset.id)
   }))));
   const synthesisCache=new Map(),synthesisPending=new Map(),synthesisQueue=[];
+  const recognitionCache=new Map();
+  const jobKey=job=>job.speaker.id+'|'+normalizeSpeechText(job.ttsText);
+  const recognitionKey=job=>jobKey(job)+'|'+job.preset.speed+'|'+depth;
+  const lastSynthesisUse=new Map();
+  jobs.forEach((job,i)=>lastSynthesisUse.set(jobKey(job),i));
+  let lastRenderAt=startedAt;
   let activeSynth=0;
   const pumpSynthesis=()=>{
-   while(activeSynth<2&&synthesisQueue.length){
+   while(activeSynth<3&&synthesisQueue.length){
     const job=synthesisQueue.shift();
     if(multiStop){job.resolve({error:Error('中止しました')});continue}
     activeSynth++;
@@ -1036,7 +1055,7 @@ $('start').addEventListener('click',async()=>{
    }
   };
   const preload=(job)=>{
-   const key=job.speaker.id+'|'+job.ttsText;
+   const key=jobKey(job);
    if(synthesisCache.has(key))return Promise.resolve({base:synthesisCache.get(key)});
    if(synthesisPending.has(key))return synthesisPending.get(key);
    let resolve;
@@ -1046,9 +1065,9 @@ $('start').addEventListener('click',async()=>{
    pumpSynthesis();
    return promise;
   };
-  // 音素モデルの初期化と最初の4件の音声合成を同時に進める。
+  // 音素モデルの初期化と最初の8件の音声合成を同時に進める。
   const modelReady=getPhonemeRecognizer().then(()=>({ok:true}),error=>({error}));
-  const lookAhead=4;
+  const lookAhead=8;
   for(let i=0;i<Math.min(lookAhead,jobs.length);i++)preload(jobs[i]);
   for(let i=0;i<jobs.length;i++){
    if(multiStop)break;
@@ -1058,28 +1077,44 @@ $('start').addEventListener('click',async()=>{
    try{
     const audio=await preload(jobs[i]);
     if(audio.error)throw audio.error;
-    const model=await modelReady;
-    if(model.error)throw model.error;
-    const adjusted=respeedAudioBuffer(audio.base,preset.speed);
-    // 一括処理中は表示されないWAVの生成を省略。結果選択時に従来どおり生成する。
-    await acceptDecodedAudio(adjusted,false,word+'_'+speaker.name+'_'+preset.name,true);
-    await recognize(depth==='quick');
-    wordResults.push(captureWordResult(word,speaker,depth,preset,ttsText));
+    const key=recognitionKey(jobs[i]);
+    if(recognitionCache.has(key)){
+     // 完全に同じ合成音声・速度・解析条件のときだけ再計算を省略。
+     // 7条件の解析結果をそのまま再利用し、文字の参考値は各単語で計算する。
+     const cached=recognitionCache.get(key);
+     wordResults.push({...cached,word,speakerId:speaker.id,speakerName:speaker.name,presetId:preset.id,presetName:preset.name,ttsText,
+      reference:reverseTextReference(word)?.display||'変換不可',human:''});
+    }else{
+     const model=await modelReady;
+     if(model.error)throw model.error;
+     const adjusted=respeedAudioBuffer(audio.base,preset.speed);
+     // 一括処理中は表示されないWAVの生成を省略。結果選択時に従来どおり生成する。
+     await acceptDecodedAudio(adjusted,false,word+'_'+speaker.name+'_'+preset.name,true);
+     await recognize(depth==='quick');
+     const result=captureWordResult(word,speaker,depth,preset,ttsText);
+     wordResults.push(result);
+     recognitionCache.set(key,result);
+    }
    }catch(e){
     wordResults.push({word,speakerId:speaker.id,speakerName:speaker.name,presetId:preset.id,presetName:preset.name,ttsText,depth,reference:reverseTextReference(word)?.display||'変換不可',error:e?.message||String(e)});
    }
+   // 使用し終えた合成音声をキャッシュから解放。多数件でも先読みが肥大化しない。
+   const synthesisKey=jobKey(jobs[i]);
+   if(lastSynthesisUse.get(synthesisKey)===i){synthesisCache.delete(synthesisKey);synthesisPending.delete(synthesisKey)}
    // 次の1件だけ追加予約。大量の不要なAPI呼び出しは避ける。
    if(!multiStop&&i+lookAhead<jobs.length)preload(jobs[i+lookAhead]);
-   // 表示の再構築は5件ごと。集計データは毎件完全保存する。
-   if(wordResults.length%5===0||i===jobs.length-1)renderWordResults();
-   await new Promise(resolve=>requestAnimationFrame(resolve));
+   // 描画は時間間隔で間引く。結果の計算・保存・コピーには一切影響しない。
+   const now=performance.now();
+   $('multiStatus').textContent=wordResults.length+' / '+total+'件 ／ 経過 '+formatElapsed(now-startedAt)+' ／ '+word+' ／ '+speaker.name;
+   if(now-lastRenderAt>=1200||i===jobs.length-1){renderWordResults();lastRenderAt=now;await new Promise(resolve=>requestAnimationFrame(resolve));}
   }
  }finally{
   multiRunning=false;setBusy(false);lockInputs(false);
   if($('autoWords').checked)nextRunNeedsNewWords=true;
   $('stop').classList.add('hide');$('stop').disabled=false;updateSpeakerCount();
+  runTiming.endedAt=performance.now();runTiming.cancelled=multiStop;
   const success=wordResults.filter(r=>!r.error).length;
-  $('multiStatus').textContent=(multiStop?'途中で中止：':'')+wordResults.length+'件中 '+success+'件の解析完了'+(success<wordResults.length?'（'+(wordResults.length-success)+'件失敗）':'')+' ／ 処理時間 '+Math.round((performance.now()-startedAt)/1000)+'秒';
+  $('multiStatus').textContent=(multiStop?'途中で中止：':'')+wordResults.length+'件中 '+success+'件の解析完了'+(success<wordResults.length?'（'+(wordResults.length-success)+'件失敗）':'')+' ／ '+timingSummary();
   $('copyAllWords').disabled=!wordResults.length;
   const first=wordResults.findIndex(r=>!r.error);
   if(first>=0)showWordResult(first);
@@ -1088,8 +1123,8 @@ $('start').addEventListener('click',async()=>{
  }
 });
 // 単語別の実験結果は、再解析・音声ファイル読み込みとは独立に保持する。
-$('upload').addEventListener('change',async e=>{wordResults=[];selectedWordIndex=-1;$('multiReport').classList.add('hide');const f=e.target.files?.[0];if(!f||busy)return;setBusy(true);wordAtRun=$('word').value.trim();try{await acceptAudio(await f.arrayBuffer(),true);await recognize()}catch(err){status(err?.message||String(err),'error')}finally{setBusy(false)}});
-$('runAsr').addEventListener('click',async()=>{if(busy)return;wordResults=[];selectedWordIndex=-1;$('multiReport').classList.add('hide');setBusy(true);try{await recognize()}catch(e){status(e?.message||String(e),'error')}finally{setBusy(false)}});
+$('upload').addEventListener('change',async e=>{runTiming=null;wordResults=[];selectedWordIndex=-1;$('multiReport').classList.add('hide');const f=e.target.files?.[0];if(!f||busy)return;setBusy(true);wordAtRun=$('word').value.trim();try{await acceptAudio(await f.arrayBuffer(),true);await recognize()}catch(err){status(err?.message||String(err),'error')}finally{setBusy(false)}});
+$('runAsr').addEventListener('click',async()=>{if(busy)return;runTiming=null;wordResults=[];selectedWordIndex=-1;$('multiReport').classList.add('hide');setBusy(true);try{await recognize()}catch(e){status(e?.message||String(e),'error')}finally{setBusy(false)}});
 $('variants').addEventListener('click',async()=>{if(busy)return;setBusy(true);try{await tryVariants()}catch(e){status(e?.message||String(e),'error')}finally{setBusy(false)}});
 $('copyAi').addEventListener('click',async()=>{const ok=await copyText(aiResult);status(ok?'推定結果をコピーしました':'コピーできませんでした',ok?'success':'error')});
 $('copyBatch').addEventListener('click',async()=>{const ok=await copyText(batchText());status(ok?'全結果をコピーしました':'コピーできませんでした',ok?'success':'error')});
